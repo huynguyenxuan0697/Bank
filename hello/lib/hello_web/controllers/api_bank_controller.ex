@@ -14,19 +14,20 @@ defmodule HelloWeb.ApiBankController do
     end
     @psw_secret "sfowieru091203921idsadfijljxzvcz00zaalkNDSADLKS09800DZMXCMkmsfasdfas123131dffd332d+_="
     def create(conn, %{"account" => account,"password" => password}) do 
-        password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
-        Usermanage.insert_user(account,password)
+        hashing_password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
+        Usermanage.insert_user(account,hashing_password)
         conn |> send_resp(200,"Signup successfully")
     end
 
-    def deposit(conn, %{"id"=> id,"deposit"=> deposit,"accesstoken"=>token}) do
+    def deposit(conn, %{"id"=> id,"deposit"=> deposit}) do
+        token = get_token(conn)
         case verify_token(token) do
         {:ok, token_sub_id} ->
             if (token_sub_id == id ) do
             money = Usermanage.show_money(id)
             money = money + elem(Integer.parse(deposit),0)
             Usermanage.update_money(id,money)
-            conn |> send_resp(200,"Deposit successfully")
+            conn |> json %{money: money}
             else
             conn |> send_resp(401,"Unauthorized")
             end
@@ -37,7 +38,8 @@ defmodule HelloWeb.ApiBankController do
         end
     end
 
-    def withdraw(conn, %{"id"=> id,"withdraw"=> withdraw,"accesstoken"=>token}) do
+    def withdraw(conn, %{"id"=> id,"withdraw"=> withdraw}) do
+        token = get_token(conn)
         case verify_token(token) do
             {:ok, token_sub_id} ->
                 if (token_sub_id == id ) do
@@ -53,11 +55,11 @@ defmodule HelloWeb.ApiBankController do
             _ ->
                 conn
             end
-        # -------------------------------------------
-        
+        # -------------------------------------------        
     end
 
-    def transfer(conn,%{"receiverid"=>receiverid,"receivername"=>receivername,"money"=>money,"id"=>id,"accesstoken"=>token}) do
+    def transfer(conn,%{"receiverid"=>receiverid,"receivername"=>receivername,"money"=>money,"id"=>id}) do
+        token = get_token(conn)
         case verify_token(token) do
             {:ok, token_sub_id} ->
                 if (token_sub_id == id ) do
@@ -89,7 +91,7 @@ defmodule HelloWeb.ApiBankController do
         password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
         case token_sign_in(account,password) do
             #  {:ok, token, claims} -> json conn, %{accesstoken: token}
-                    {:ok, token} ->   json conn, %{accesstoken: token}
+                    {:ok, token, user_info}  ->  json conn, %{accesstoken: token, account: user_info.account, id: user_info.id, money: user_info.money}
                                 _ ->  send_resp(conn, 404, "Not found")
             end
     end
@@ -112,7 +114,8 @@ defmodule HelloWeb.ApiBankController do
     def token_sign_in(account,password) do
         case verify_account_password(account,password) do
             # {:ok, id} -> Guardian.encode_and_sign(Usermanage.get_user(id),%{}, ttl: {1, :minute})
-            {:ok, id} -> jwt_encode(Usermanage.get_user(id))
+            {:ok, id} ->    user_info = Usermanage.get_user(id) |> struct_to_map() |> Map.drop([:password]) 
+                            {:ok, jwt_encode(Usermanage.get_user(id)), user_info }
                     _ ->  {:error, :unauthorized}
         end
     end
@@ -127,7 +130,7 @@ defmodule HelloWeb.ApiBankController do
 
     #jwt
     @secret_key "UTELcvSwFT9t7u51SxExjsnUXjXTLFCHnUKx5trjsKjQLllCr9PwARorGZRILp56"
-    @life_time  1   # minute
+    @life_time  60   # minute
     def jwt_encode(user) do
         # -------------- header ---------------------
         header = %{
@@ -152,7 +155,7 @@ defmodule HelloWeb.ApiBankController do
         signature = jwt_header<>"."<>jwt_claim
         jwt_signature = :crypto.hmac(:sha256, @secret_key, signature) |> Base.url_encode64()
         token = jwt_header<>"."<>jwt_claim<>"."<>jwt_signature
-        {:ok, token}
+        token
     end
 
     def jwt_decode(token) do
@@ -184,6 +187,21 @@ defmodule HelloWeb.ApiBankController do
         end
     end
 
+    def inspect_token(conn,_params) do
+        accesstoken = get_token(conn)
+        case jwt_decode(accesstoken) do
+        {:ok,claim} ->  user = claim["sub"] |> Usermanage.get_user() |> struct_to_map() |> Map.drop([:password]) 
+                        json conn, user 
+                        
+                _   -> conn |> send_resp(404, "Time out")
+        end
+    end
+
+    defp get_token(conn) do
+        bearer_token = hd(get_req_header(conn,"authorization"))
+        ["Bearer", accesstoken] = String.split(bearer_token," ",parts: 2)
+        accesstoken
+    end
     defp decode_baseurl64_json(baseurl64) do
         {:ok, json}  = baseurl64 |> Base.url_decode64() 
         {:ok, map}       = json |> JSON.decode()
@@ -263,6 +281,8 @@ defmodule HelloWeb.ApiBankController do
         {:ok, json_resp} = JSON.decode(resp.body)
         json_resp
     end
+
+   
   end
 
  

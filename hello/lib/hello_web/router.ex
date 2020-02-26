@@ -11,8 +11,7 @@ defmodule HelloWeb.Router do
     # plug :"Controller.test"
     # plug LearningPlug2, %{}
     # plug :test_assign
-    plug HelloWeb.Plugs.SetCurrentUser
-    
+    # plug HelloWeb.Plugs.SetCurrentUser
   end
 
 
@@ -20,34 +19,40 @@ defmodule HelloWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :auth do
+    plug HelloWeb.Plugs.Auth
+  end
+
+
+
   scope "/", HelloWeb do
     pipe_through :browser
-    get "/", PageController, :index
-    get "/bank",BankController,:index
-    get "/bank/signup",BankController, :signup
-    get "/bank/signin",BankController, :signin
-    post "/bank/signup", BankController, :signuphandler
-    post "/bank/signin", BankController, :signinhandler
-    get  "/bank/account/:name/:id", BankController, :account
-    post "/bank/account/:name/:id", BankController, :deposit
-    get  "/bank/account/:name/:id/transaction", BankController, :transaction
-    post "/bank/account/:name/:id/transaction", BankController, :transactionhandler 
-   
+    get  "/", PageController, :index
+    get  "/bank",BankController,:index
+    get  "/bank/signup",BankController, :signup
+    get  "/bank/signin",BankController, :signin
+    get  "/bank/account", BankController, :account
+    get  "/bank/account/transaction", BankController, :transaction
   end
+
+  
+
 
   # Other scopes may use custom stacks.
   scope "/api/bank", HelloWeb do
     pipe_through :api
     get  "/GetAllUsers" ,ApiBankController, :show_all
-    post "/Signup"      ,ApiBankController, :create
-    post "/Signin"      ,ApiBankController, :signin
-    post "/Deposit"     ,ApiBankController, :deposit
-    post "/Withdraw"    ,ApiBankController, :withdraw
-    post "/Transfer"    ,ApiBankController, :transfer
      #------- Facebook oauth ----------------------------------- 
      get "/LoginWithFacebook",  ApiBankController, :facebook_login
      get "/FacebookHandler"  ,  ApiBankController, :facebook_login_handler  
+     #------- Auth ---------------------------------------------
+    post "/Deposit"     ,ApiBankController, :deposit
+    post "/Withdraw"    ,ApiBankController, :withdraw
+    post "/Transfer"    ,ApiBankController, :transfer
+    post "/InspectToken",ApiBankController, :inspect_token
+    post "/Signup"      ,ApiBankController, :create
+    post "/Signin"      ,ApiBankController, :signin
   end
- 
+  
 end
 

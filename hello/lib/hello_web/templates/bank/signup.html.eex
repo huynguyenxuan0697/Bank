@@ -1,13 +1,12 @@
 <div class="phx-hero">
   <h1>Sign up</h1>
-  <form action="" method="POST" name="signupform">
+  
     <label for="account">Account</label>
-    <input type="text" name="account" id="account" required>
+    <input type="text" name="account" id="signup_account" required>
     <label for="password">Password</label>
-    <input type="password" name="password" id="password" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" required>
-    <input type="hidden" value="<%= @token %>" name="_csrf_token"/>
-    <input type="submit" value="Submit">
-  </form>
+    <input type="password" name="password" id="signup_password" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" required>
+    <button class="btn btn-success" onclick="signupHandler()">Sign up </button>
+
 </div>
 
 <div id="message" class="mess">
