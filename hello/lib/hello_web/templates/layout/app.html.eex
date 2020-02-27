@@ -32,52 +32,58 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
     <script>
-      window.onpaint = init()
+      window.onload = init()
       function init(){
-        href = "http://localhost:4000/bank/account";
-        if(location.href == href){
-          user = JSON.parse(localStorage.getItem("userInfo")) 
+        const user = JSON.parse(localStorage.getItem("userInfo"))
+        if (location.href == "http://localhost:4000/bank/account"){
           document.getElementById("user_name").innerHTML= user.account
           document.getElementById("user_money").innerHTML = user.money
+        }
+        if (location.href == "http://localhost:4000/bank/signin"){
+          if (user !== null)
+            location.replace('http://localhost:4000/bank/account')
         }
       }
 
 
         function signinHandler() {
-      account = document.getElementById("signin_account").value
-      password = document.getElementById("signin_password").value
-      axios({
-          method: 'post',
-          url: 'http://localhost:4000/api/bank/Signin',
-          data:{
-              "account":account,
-              "password":password
-          }
-      }).then(result =>{
-          localStorage.setItem("userInfo",JSON.stringify(result.data))
-          location.replace('http://localhost:4000/bank/account')
-      }).catch(error => console.log(error))
-    }
+          var account = document.getElementById("signin_account").value
+          var password = document.getElementById("signin_password").value
+          axios({
+            method: 'post',
+            url: 'http://localhost:4000/api/bank/Signin',
+            data:{
+                "account":account,
+                "password":password
+              }
+            }).then(result =>{
+                localStorage.setItem("userInfo",JSON.stringify(result.data))
+                location.replace('http://localhost:4000/bank/account')
+            }).catch(error => console.log(error))
+        }
 
 
 
 
         function signupHandler(){
-      account = document.getElementById("signup_account").value
-      password = document.getElementById("signup_password").value
-      axios({
-          method: 'post',
-          url: 'http://localhost:4000/api/bank/Signup',
-          data:{
-              "account":account,
-              "password":password
-          }
-      }).then(result =>{
-          location.replace('http://localhost:4000/bank/signin')
-      }).catch(error => console.log(error))
-    }
+          var account = document.getElementById("signup_account").value
+          var password = document.getElementById("signup_password").value
+          axios({
+              method: 'post',
+              url: 'http://localhost:4000/api/bank/Signup',
+              data:{
+                  "account":account,
+                  "password":password
+              }
+          }).then(result =>{
+              location.replace('http://localhost:4000/bank/signin')
+          }).catch(error => console.log(error))
+        }
 
-
+        function logoutHandler() {
+          localStorage.clear();
+          location.replace('http://localhost:4000/bank')
+        }
   
     </script>
   </body>
