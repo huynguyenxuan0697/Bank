@@ -55,6 +55,13 @@ defmodule Hello.Usermanage do
     |> Repo.one()
   end
 
+  def check_account(account) do 
+    id = Usermanage
+    |> where([u], u.account == ^account)
+    |> select([u], u.id)
+    |> Repo.one()
+  end
+
   def show_money(id) do
     Usermanage
     |> where([u], u.id == ^id)

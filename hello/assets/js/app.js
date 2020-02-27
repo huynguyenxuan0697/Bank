@@ -75,9 +75,6 @@ myInput.onkeyup = function() {
 }
 
 
-function logoutHandler(){
-    localStorage.removeItem("userInfo")
-    location.replace("http://localhost:4000/bank")
-}
+
 
 

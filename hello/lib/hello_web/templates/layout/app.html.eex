@@ -70,12 +70,15 @@
           method: 'post',
           url: 'http://localhost:4000/api/bank/Signup',
           data:{
-              "account":account,
+              "account" :account,
               "password":password
           }
       }).then(result =>{
           location.replace('http://localhost:4000/bank/signin')
-      }).catch(error => console.log(error))
+      }).catch(error => {
+        <%# console.log(error.response.data) %>
+        document.getElementById("signup_alert").innerHTML = error.response.data
+      })
     }
 
     function depositHandler(){

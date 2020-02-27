@@ -14,9 +14,13 @@ defmodule HelloWeb.ApiBankController do
     end
     @psw_secret "sfowieru091203921idsadfijljxzvcz00zaalkNDSADLKS09800DZMXCMkmsfasdfas123131dffd332d+_="
     def create(conn, %{"account" => account,"password" => password}) do 
+        if Usermanage.check_account(account) do
+            conn |> send_resp(406, "Duplicate account")
+        else 
         hashing_password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
         Usermanage.insert_user(account,hashing_password)
-        conn |> send_resp(200,"Signup successfully")
+        conn |> send_resp(201,"Signup successfully")
+        end
     end
 
     def deposit(conn, %{"id"=> id,"deposit"=> deposit}) do
