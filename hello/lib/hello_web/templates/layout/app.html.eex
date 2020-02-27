@@ -32,6 +32,7 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
     <script>
+   
       window.onpaint = init()
       function init(){
         href = "http://localhost:4000/bank/account";
@@ -77,8 +78,77 @@
       }).catch(error => console.log(error))
     }
 
+    function depositHandler(){
+    user = JSON.parse(localStorage.getItem("userInfo"))
+    money = document.getElementById("deposit_money").value
+    axios({
+        method: 'post',
+        url: 'http://localhost:4000/api/bank/Deposit',
+        data:{
+            "id": user.id,
+            "deposit": money
+        },
+        headers:{
+            "Authorization": `Bearer ${user.accesstoken}`
+        }
+    }).then(result=>{
+        user.money = result.data.money
+        localStorage.setItem("userInfo",JSON.stringify(user))
+        location.href = "http://localhost:4000/bank/account"
+    }).catch(error => console.log(error))
+}
+
+function withdrawHandler(){
+    user = JSON.parse(localStorage.getItem("userInfo")) 
+    money = document.getElementById("withdraw_money").value
+    axios({
+        method: 'post',
+        url: 'http://localhost:4000/api/bank/Withdraw',
+        data:{
+            "id": user.id,
+            "withdraw": money
+        },
+        headers:{
+            "authorization": `Bearer ${user.accesstoken}`
+        }
+    }).then(result=>{
+        user.money = result.data.money
+        localStorage.setItem("userInfo",JSON.stringify(user))
+        location.href = "http://localhost:4000/bank/account"
+    }).catch(error => console.log(error))
+}
+
 
   
+function transferHandler(){
+    user         = JSON.parse(localStorage.getItem("userInfo")) 
+    money        = document.getElementById("transfer_money").value
+    receiverName = document.getElementById("receiver_name").value
+    receiverId   = document.getElementById("receiver_id").value
+    axios({
+        method: 'post',
+        url: 'http://localhost:4000/api/bank/Transfer',
+        data:{
+            "receiverid": receiverId,
+            "receivername": receiverName,
+            "money": money,
+            "id": user.id
+        },
+        headers:{
+            "authorization": `Bearer ${user.accesstoken}`
+        }
+    }).then(result=>{
+        user.money = result.data.money
+        localStorage.setItem("userInfo",JSON.stringify(user))
+        location.href = "http://localhost:4000/bank/account"
+    }).catch(error => console.log(error))
+}
+  
+  function logoutHandler(){
+    localStorage.removeItem("userInfo")
+    location.replace("http://localhost:4000/bank")
+}
+
     </script>
   </body>
 </html>

@@ -21,6 +21,7 @@ defmodule HelloWeb.ApiBankController do
 
     def deposit(conn, %{"id"=> id,"deposit"=> deposit}) do
         token = get_token(conn)
+        id = Integer.to_string(id)
         case verify_token(token) do
         {:ok, token_sub_id} ->
             if (token_sub_id == id ) do
@@ -40,13 +41,14 @@ defmodule HelloWeb.ApiBankController do
 
     def withdraw(conn, %{"id"=> id,"withdraw"=> withdraw}) do
         token = get_token(conn)
+        id = Integer.to_string(id)
         case verify_token(token) do
             {:ok, token_sub_id} ->
                 if (token_sub_id == id ) do
                     money = Usermanage.show_money(id)
                     money = money - elem(Integer.parse(withdraw),0)
                     Usermanage.update_money(id,money)
-                    conn |> send_resp(200,"Withdraw successfully")
+                    conn |> json %{money: money}
                 else
                 conn |> send_resp(401,"Unauthorized")
                 end
@@ -60,6 +62,8 @@ defmodule HelloWeb.ApiBankController do
 
     def transfer(conn,%{"receiverid"=>receiverid,"receivername"=>receivername,"money"=>money,"id"=>id}) do
         token = get_token(conn)
+        id = Integer.to_string(id)
+        IO.inspect conn
         case verify_token(token) do
             {:ok, token_sub_id} ->
                 if (token_sub_id == id ) do
@@ -71,7 +75,7 @@ defmodule HelloWeb.ApiBankController do
                         source_money = source_money - money
                         Usermanage.update_money(receiverid, target_money)
                         Usermanage.update_money(id,source_money)
-                        conn |> send_resp(200,"Transfer to #{receivername} successfully")                     
+                        conn |> json %{money: source_money}                  
                     else
                         conn |> send_resp(406,"")
                     end            

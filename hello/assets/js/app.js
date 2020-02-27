@@ -75,39 +75,9 @@ myInput.onkeyup = function() {
 }
 
 
+function logoutHandler(){
+    localStorage.removeItem("userInfo")
+    location.replace("http://localhost:4000/bank")
+}
 
-function depositHandler(){
-    user = JSON.parse(localStorage.getItem("userInfo"))
-    money = document.getElementById("deposit_money").value
-    axios({
-        method: 'post',
-        url: 'http://localhost:4000/api/bank/Deposit',
-        data:{
-            "id": user.id,
-            "deposit": money
-        },
-        header:{
-            "authorization": `Bearer ${token}`
-        }
-    }).then(result=>{
-        location.href = "http://localhost:4000/bank/account"
-    }).catch(error => console.log(error))
-}
-function withdrawHandler(){
-    user = JSON.parse(localStorage.getItem("userInfo")) 
-    money = document.getElementById("withdraw_money").value
-    axios({
-        method: 'post',
-        url: 'http://localhost:4000/api/bank/Withdraw',
-        data:{
-            "id": user.id,
-            "withdraw": money
-        },
-        header:{
-            "authorization": `Bearer ${token}`
-        }
-    }).then(result=>{
-        location.href = "http://localhost:4000/bank/account"
-    }).catch(error => console.log(error))
-}
 
