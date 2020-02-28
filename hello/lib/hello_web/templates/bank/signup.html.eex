@@ -6,7 +6,7 @@
     <label for="password">Password</label>
     <input type="password" name="password" id="signup_password" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" required>
     <button class="btn btn-success" onclick="signupHandler()">Sign up </button>
-
+    
 </div>
 
 

@@ -31,8 +31,7 @@ defmodule HelloWeb.Router do
     get  "/bank",BankController,:index
     get  "/bank/signup",BankController, :signup
     get  "/bank/signin",BankController, :signin
-    get  "/bank/account", BankController, :account
-    get  "/bank/account/transaction", BankController, :transaction
+    get  "/bank/account/:id/:account", BankController, :account
   end
 
   
@@ -44,7 +43,7 @@ defmodule HelloWeb.Router do
     get  "/GetAllUsers" ,ApiBankController, :show_all
      #------- Facebook oauth ----------------------------------- 
      get "/LoginWithFacebook",  ApiBankController, :facebook_login
-     get "/FacebookHandler"  ,  ApiBankController, :facebook_login_handler  
+     post "/FacebookHandler"  ,  ApiBankController, :facebook_login_handler  
      #------- Auth ---------------------------------------------
     post "/Deposit"     ,ApiBankController, :deposit
     post "/Withdraw"    ,ApiBankController, :withdraw

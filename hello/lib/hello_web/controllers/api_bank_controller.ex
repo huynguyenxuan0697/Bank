@@ -67,12 +67,11 @@ defmodule HelloWeb.ApiBankController do
     def transfer(conn,%{"receiverid"=>receiverid,"receivername"=>receivername,"money"=>money,"id"=>id}) do
         token = get_token(conn)
         id = Integer.to_string(id)
-        IO.inspect conn
         case verify_token(token) do
             {:ok, token_sub_id} ->
                 if (token_sub_id == id ) do
                     money = elem(Integer.parse(money),0)
-                    if elem(Integer.parse(receiverid),0) == Usermanage.show_id(receivername) do
+                    if elem(Integer.parse(receiverid),0) == Usermanage.show_id(receivername) && id !== receiverid do
                         target_money = Usermanage.show_money(receiverid)
                         source_money = Usermanage.show_money(id)
                         target_money = target_money + money
@@ -80,7 +79,7 @@ defmodule HelloWeb.ApiBankController do
                         Usermanage.update_money(receiverid, target_money)
                         Usermanage.update_money(id,source_money)
                         conn |> json %{money: source_money}                  
-                    else
+                    else 
                         conn |> send_resp(406,"")
                     end            
                 else
@@ -224,26 +223,25 @@ defmodule HelloWeb.ApiBankController do
     @facebook_api "https://graph.facebook.com"
 
     def facebook_login(conn,_params) do
-        redirect(conn, external: "https://www.facebook.com/v6.0/dialog/oauth?client_id=#{@app_id}&redirect_uri=#{@redirect_url}&state=#{"{st=state123abc,ds=123456789}"}")
+        redirect(conn, external: "https://www.facebook.com/v6.0/dialog/oauth?client_id=#{@app_id}&redirect_uri=#{"http://localhost:4000/api"}&state=#{"{st=state123abc,ds=123456789}"}&response_type=token")
     end
     #exchange code for access token
-    def facebook_login_handler(conn, %{"code"=> code}) do
+    def facebook_login_handler(conn, %{"accesstoken"=> access_token}) do
 
-        %{
-            "access_token"=> access_token,
-            "expires_in"=> expires_in,
-            "token_type" => token_type
-            } = exchange_access_token(code) # expire : second till expire
+        # %{
+        #     "access_token"=> access_token,
+        #     "expires_in"=> expires_in,
+        #     "token_type" => token_type
+        #     } = exchange_access_token(code) # expire : second till expire
 
         %{
             "app_id" => app_id,
+            "type" => type,
             "application" => application,
             "data_access_expires_at" => data_access_expires_at,
             "expires_at" => expires_at,
             "is_valid" => is_valid,
-            "issued_at" => issued_at,
             "scopes" => scope,
-            "type" => type,
             "user_id" => user_id
             } = inspect_access_token(access_token)
 
@@ -254,11 +252,11 @@ defmodule HelloWeb.ApiBankController do
 
         user = Repo.get_by(Usermanage, account: name)
         if is_nil(user) do
-            create(conn, %{"account" => name,"password" => user_id })
-        else
-            signin(conn,%{"account"=> name,"password"=> user_id })
-        end
-
+            hashing_password = :crypto.hash(:sha256, user_id<>@psw_secret) |> Base.url_encode64()
+            Usermanage.insert_user(name,hashing_password)
+        end        
+            signin(conn,%{"account"=>name,"password"=>user_id})             
+            
     end
 
     defp exchange_access_token(code)do

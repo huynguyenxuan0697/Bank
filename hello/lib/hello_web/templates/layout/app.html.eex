@@ -33,14 +33,47 @@
     <script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
     <script>
    
-      window.onpaint = init()
-      function init(){
-        href = "http://localhost:4000/bank/account";
-        if(location.href == href){
+      window.onload = init()
+      function init(){        
+        user =  JSON.parse(localStorage.getItem("userInfo"))        
+        href_home   = 'http://localhost:4000/bank'
+        href_signin = 'http://localhost:4000/bank/signin'
+        href_signup = 'http://localhost:4000/bank/singup'
+       if (user != null ) {
+         href = `http://localhost:4000/bank/account/${user.id}/${user.account}`
+         if (location.href != href ){
+          location.replace(`http://localhost:4000/bank/account/${user.id}/${user.account}`)          
+         }else {
           user = JSON.parse(localStorage.getItem("userInfo")) 
-          document.getElementById("user_name").innerHTML= user.account
-          document.getElementById("user_money").innerHTML = user.money
+          document.getElementById("user_name").innerHTML  = user.account
+          document.getElementById("user_money").innerHTML = user.money          
+         }
         }
+        else{
+          
+          if(location.hash) {
+            hash = location.hash.substr(1)
+            list = hash.split("&")
+            token = list[0].split("=")[1]
+            axios({
+              method:'post',
+              url:'http://localhost:4000/api/bank/FacebookHandler',
+              data:{
+                "accesstoken": token
+              }
+            }).then(result=>{
+            
+              localStorage.setItem("userInfo",JSON.stringify(result.data))
+             
+            
+            
+            }).catch(error => console.log(error.response))
+          }
+            else if (location.href !=  href_home && location.href !=  href_signin && location.href !=  href_signup){
+            location.replace(href_home)
+          } 
+        }
+        
       }
 
 
@@ -56,7 +89,7 @@
           }
       }).then(result =>{
           localStorage.setItem("userInfo",JSON.stringify(result.data))
-          location.replace('http://localhost:4000/bank/account')
+          location.replace(`http://localhost:4000/bank/account/${result.data.id}/${result.data.account}`)
       }).catch(error => console.log(error))
     }
 
@@ -75,8 +108,7 @@
           }
       }).then(result =>{
           location.replace('http://localhost:4000/bank/signin')
-      }).catch(error => {
-        <%# console.log(error.response.data) %>
+      }).catch(error => {      
         document.getElementById("signup_alert").innerHTML = error.response.data
       })
     }
@@ -97,7 +129,7 @@
     }).then(result=>{
         user.money = result.data.money
         localStorage.setItem("userInfo",JSON.stringify(user))
-        location.href = "http://localhost:4000/bank/account"
+        location.href =`http://localhost:4000/bank/account/${user.id}/${user.account}`
     }).catch(error => console.log(error))
 }
 
@@ -117,7 +149,7 @@ function withdrawHandler(){
     }).then(result=>{
         user.money = result.data.money
         localStorage.setItem("userInfo",JSON.stringify(user))
-        location.href = "http://localhost:4000/bank/account"
+        location.href = `http://localhost:4000/bank/account/${user.id}/${user.account}`
     }).catch(error => console.log(error))
 }
 
@@ -143,7 +175,7 @@ function transferHandler(){
     }).then(result=>{
         user.money = result.data.money
         localStorage.setItem("userInfo",JSON.stringify(user))
-        location.href = "http://localhost:4000/bank/account"
+        location.href = `http://localhost:4000/bank/account/${user.id}/${user.account}`
     }).catch(error => console.log(error))
 }
   
@@ -151,6 +183,11 @@ function transferHandler(){
     localStorage.removeItem("userInfo")
     location.replace("http://localhost:4000/bank")
 }
+
+  function loginWithFacebookHandler(){
+    location.href = "https://www.facebook.com/v6.0/dialog/oauth?client_id=197695828014122&redirect_uri=http://localhost:4000/bank&state=st=state123abc,ds=123456789&response_type=token"
+    
+    }
 
     </script>
   </body>
