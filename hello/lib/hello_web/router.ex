@@ -28,10 +28,10 @@ defmodule HelloWeb.Router do
   scope "/", HelloWeb do
     pipe_through :browser
     get  "/", PageController, :index
-    get  "/bank",BankController,:index
-    get  "/bank/signup",BankController, :signup
-    get  "/bank/signin",BankController, :signin
-    get  "/bank/account/:id/:account", BankController, :account
+    #get  "/bank",BankController,:index
+    #get  "/bank/signup",BankController, :signup
+    #get  "/bank/signin",BankController, :signin
+    #get  "/bank/account/:id/:account", BankController, :account
   end
 
   
@@ -41,10 +41,11 @@ defmodule HelloWeb.Router do
   scope "/api/bank", HelloWeb do
     pipe_through :api
     get  "/GetAllUsers" ,ApiBankController, :show_all
-     #------- Facebook oauth ----------------------------------- 
-     get "/LoginWithFacebook",  ApiBankController, :facebook_login
-     post "/FacebookHandler"  ,  ApiBankController, :facebook_login_handler  
-     #------- Auth ---------------------------------------------
+    get "/GetUser", ApiBankController, :get_user
+    #------- Facebook oauth ----------------------------------- 
+    get "/LoginWithFacebook",  ApiBankController, :facebook_login
+    post "/FacebookHandler"  ,  ApiBankController, :facebook_login_handler  
+    #------- Auth ---------------------------------------------
     post "/Deposit"     ,ApiBankController, :deposit
     post "/Withdraw"    ,ApiBankController, :withdraw
     post "/Transfer"    ,ApiBankController, :transfer

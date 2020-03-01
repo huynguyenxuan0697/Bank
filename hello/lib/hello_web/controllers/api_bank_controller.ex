@@ -17,68 +17,72 @@ defmodule HelloWeb.ApiBankController do
         if Usermanage.check_account(account) do
             conn |> send_resp(406, "Duplicate account")
         else 
-        hashing_password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
-        Usermanage.insert_user(account,hashing_password)
-        conn |> send_resp(201,"Signup successfully")
+            hashing_password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
+            Usermanage.insert_user(account,hashing_password)
+            conn |> send_resp(201,"Signup successfully")
         end
     end
 
-    def deposit(conn, %{"id"=> id,"deposit"=> deposit}) do
+    def get_user(conn, _params) do
         token = get_token(conn)
-        id = Integer.to_string(id)
+        case verify_token(token) do
+            {:ok, token_sub_id} ->
+                user = Usermanage.get_user_by_id(token_sub_id)
+                json conn, %{account: user.account, money: user.money}
+            _ ->  send_resp(conn, 404, "Not found")
+        end
+    end
+
+    def deposit(conn, %{"deposit"=> deposit}) do
+        token = get_token(conn)
+        #id = Integer.to_string(id)
         case verify_token(token) do
         {:ok, token_sub_id} ->
-            if (token_sub_id == id ) do
-            money = Usermanage.show_money(id)
-            money = money + elem(Integer.parse(deposit),0)
-            Usermanage.update_money(id,money)
-            conn |> json %{money: money}
+            if (Usermanage.get_user_by_id(token_sub_id) != nil) do
+                money = Usermanage.show_money(token_sub_id)
+                money = money + elem(Integer.parse(deposit),0)
+                Usermanage.update_money(token_sub_id,money)
+                json conn, %{money: money}
             else
-            conn |> send_resp(401,"Unauthorized")
+                conn |> send_resp(401,"Unauthorized")
             end
         {:error, reason} -> 
             conn |> send_resp(401, reason)
-        _ ->
-            conn
         end
     end
 
-    def withdraw(conn, %{"id"=> id,"withdraw"=> withdraw}) do
+    def withdraw(conn, %{"withdraw"=> withdraw}) do
         token = get_token(conn)
-        id = Integer.to_string(id)
         case verify_token(token) do
             {:ok, token_sub_id} ->
-                if (token_sub_id == id ) do
-                    money = Usermanage.show_money(id)
+                if (Usermanage.get_user_by_id(token_sub_id) != nil) do
+                    money = Usermanage.show_money(token_sub_id)
                     money = money - elem(Integer.parse(withdraw),0)
-                    Usermanage.update_money(id,money)
-                    conn |> json %{money: money}
+                    Usermanage.update_money(token_sub_id,money)
+                    json conn, %{money: money}
                 else
-                conn |> send_resp(401,"Unauthorized")
+                    conn |> send_resp(401,"Unauthorized")
                 end
             {:error, reason} -> 
                 conn |> send_resp(401, reason)
-            _ ->
-                conn
-            end
+        end
         # -------------------------------------------        
     end
 
-    def transfer(conn,%{"receiverid"=>receiverid,"receivername"=>receivername,"money"=>money,"id"=>id}) do
+    def transfer(conn,%{"receiverid"=>receiverid,"receivername"=>receivername,"money"=>money}) do
         token = get_token(conn)
-        id = Integer.to_string(id)
         case verify_token(token) do
             {:ok, token_sub_id} ->
-                if (token_sub_id == id ) do
+                if (Usermanage.get_user_by_id(token_sub_id) != nil) do
                     money = elem(Integer.parse(money),0)
-                    if elem(Integer.parse(receiverid),0) == Usermanage.show_id(receivername) && id !== receiverid do
+                    if elem(Integer.parse(receiverid),0) == Usermanage.show_id(receivername) && token_sub_id !== receiverid do
                         target_money = Usermanage.show_money(receiverid)
-                        source_money = Usermanage.show_money(id)
+                        source_money = Usermanage.show_money(token_sub_id)
                         target_money = target_money + money
                         source_money = source_money - money
                         Usermanage.update_money(receiverid, target_money)
-                        Usermanage.update_money(id,source_money)
-                        conn |> json %{money: source_money}                  
+                        Usermanage.update_money(token_sub_id,source_money)
+                        json conn, %{money: source_money}                  
                     else 
                         conn |> send_resp(406,"")
                     end            
@@ -87,9 +91,7 @@ defmodule HelloWeb.ApiBankController do
                 end
             {:error, reason} -> 
                 conn |> send_resp(401, reason)
-            _ ->
-                conn
-            end
+        end
         # ----------------------------------        
     end
 
@@ -97,8 +99,9 @@ defmodule HelloWeb.ApiBankController do
     def signin(conn,%{"account"=>account,"password"=>password})  do
         password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
         case token_sign_in(account,password) do
-            #  {:ok, token, claims} -> json conn, %{accesstoken: token}
-                    {:ok, token, user_info}  ->  json conn, %{accesstoken: token, account: user_info.account, id: user_info.id, money: user_info.money}
+                #{:ok, token, claims} -> json conn, %{accesstoken: token}
+                    #{:ok, token, user_info}  ->  json conn, %{accesstoken: token, account: user_info.account, id: user_info.id, money: user_info.money}
+                    {:ok, token}  ->  json conn, %{accesstoken: token}
                                 _ ->  send_resp(conn, 404, "Not found")
             end
     end
@@ -121,8 +124,8 @@ defmodule HelloWeb.ApiBankController do
     def token_sign_in(account,password) do
         case verify_account_password(account,password) do
             # {:ok, id} -> Guardian.encode_and_sign(Usermanage.get_user(id),%{}, ttl: {1, :minute})
-            {:ok, id} ->    user_info = Usermanage.get_user(id) |> struct_to_map() |> Map.drop([:password]) 
-                            {:ok, jwt_encode(Usermanage.get_user(id)), user_info }
+            {:ok, id} ->    #user_info = Usermanage.get_user(id) |> struct_to_map() |> Map.drop([:password]) 
+                            {:ok, jwt_encode(Usermanage.get_user(id))}
                     _ ->  {:error, :unauthorized}
         end
     end
@@ -131,7 +134,7 @@ defmodule HelloWeb.ApiBankController do
         # case Guardian.decode_and_verify(token) do
         case jwt_decode(token) do
         {:ok,claim} -> {:ok, claim["sub"]}
-                  _ -> {:error, "Unauthorized"}
+                    _ -> {:error, "Unauthorized"}
         end
     end
 

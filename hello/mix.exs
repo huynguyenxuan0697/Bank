@@ -45,6 +45,7 @@ defmodule Hello.MixProject do
       {:guardian, "~> 1.2"},
       {:plug_cowboy, "~> 2.0"},
       {:httpoison,">= 0.0.0"},
+      {:cors_plug, "~> 2.0"},
       {:json, "~> 1.2"}
     ]
   end
