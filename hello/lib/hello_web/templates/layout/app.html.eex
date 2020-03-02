@@ -69,7 +69,7 @@
           }
             else if (location.href !=  href_home && location.href !=  href_signin && location.href !=  href_signup){
             location.replace(href_home)
-          } 
+          }
         }
         
       }

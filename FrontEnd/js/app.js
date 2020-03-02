@@ -31,11 +31,15 @@ function signinHandler() {
     })
 }
 
+function loginWithFacebookHandler(){
+    location.href = "https://www.facebook.com/v6.0/dialog/oauth?client_id=197695828014122&redirect_uri=http://localhost:8080&auth_type=rerequest&scope=email&response_type=token"
+}
+
 function signupHandler(){
     account = document.getElementById("signup_account").value
     password = document.getElementById("signup_password").value
     confirmpassword = document.getElementById("signup_confirm_password").value
-    valid = document.getElementById("valid");
+    valid = document.getElementById("valid")
     if (password != confirmpassword){
         alert('Confirm password is not correct')
     }
@@ -57,7 +61,7 @@ function signupHandler(){
         }
         else{
             alert('Account or Password is not valid!')
-            valid.style.display = "block"
+            valid.style.display = 'block'
         }
     }
 }
@@ -65,6 +69,8 @@ function signupHandler(){
 window.onload = function () {
     user = JSON.parse(localStorage.getItem("userInfo"))
     if (user != null){
+        if (location.pathname == '/')
+            location.replace('http://localhost:8080/account')
         axios({
             method: 'get',
             url: 'http://localhost:4000/api/bank/GetUser',
@@ -76,6 +82,29 @@ window.onload = function () {
             document.getElementById("user_money").innerHTML = result.data.money
             //location.href =`http://localhost:4000/bank/account/${user.id}/${user.account}`
         }).catch(error => console.log(error))
+    }
+    else{
+        if (location.pathname == '/account')
+            location.replace('http://localhost:8080')
+        if(location.hash) {
+            hash = this.location.hash.substr(1)
+            list = hash.split("&")
+            token = list[0].split("=")[1]
+            axios({
+                method:'post',
+                url:'http://localhost:4000/api/bank/FacebookHandler',
+                data:{
+                    "accesstoken": token
+                }
+            }).then(result=>{
+                localStorage.setItem("userInfo",JSON.stringify(result.data))
+                location.replace(`http://localhost:8080/account`)
+            }).catch(error => {
+                console.log(error)
+                //alert("fb access denied")
+                document.getElementById('fb-alert').style.display = 'block'
+            })
+        }
     }
 }
 

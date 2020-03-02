@@ -189,7 +189,7 @@ defmodule HelloWeb.ApiBankController do
             "iss" => iss,
             "nbf" => nbf,
             "sub" => sub
-          } = claim
+        } = claim
         if (exp > time_now) && (signature_secret == jwt_signature) do
             true
         else
@@ -258,8 +258,8 @@ defmodule HelloWeb.ApiBankController do
             hashing_password = :crypto.hash(:sha256, user_id<>@psw_secret) |> Base.url_encode64()
             Usermanage.insert_user(name,hashing_password)
         end        
-            signin(conn,%{"account"=>name,"password"=>user_id})             
-            
+        signin(conn,%{"account"=>name,"password"=>user_id})             
+        
     end
 
     defp exchange_access_token(code)do
@@ -281,9 +281,9 @@ defmodule HelloWeb.ApiBankController do
         url = "#{@facebook_api}/debug_token?input_token=#{access_token}&access_token=#{app_access_token}"
         {:ok, resp} = HTTPoison.get(url)
         {:ok, json_resp} = JSON.decode(resp.body)
-         json_resp["data"]
+        json_resp["data"]
     end
-   
+
     defp get_username_email(access_token,user_id) do
         url = "#{@facebook_api}/#{user_id}?fields=name,email&access_token=#{access_token}"
         {:ok, resp} = HTTPoison.get(url)
@@ -291,7 +291,5 @@ defmodule HelloWeb.ApiBankController do
         json_resp
     end
 
-   
-  end
 
- 
+end
