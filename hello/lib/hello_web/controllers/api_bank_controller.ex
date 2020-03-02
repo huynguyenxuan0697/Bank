@@ -13,14 +13,60 @@ defmodule HelloWeb.ApiBankController do
         json conn, users
     end
     @psw_secret "sfowieru091203921idsadfijljxzvcz00zaalkNDSADLKS09800DZMXCMkmsfasdfas123131dffd332d+_="
-    def create(conn, %{"account" => account,"password" => password}) do 
-        if Usermanage.check_account(account) do
-            conn |> send_resp(406, "Duplicate account")
-        else 
-            hashing_password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
-            Usermanage.insert_user(account,hashing_password)
-            conn |> send_resp(201,"Signup successfully")
+    def create(conn, %{"account" => account,"password" => password}) do
+        cond do
+            String.match?(account,~r/^\s*$/) ->
+                resp_error(conn,"Account can't be blank")
+            String.match?(password,~r/^\s*$/) ->
+                resp_error(conn,"Password can't be blank")
+            !is_nil(password) && String.length(password) < 8 -> 
+                resp_error(conn,"Password must be at least 8 characters")
+            true ->
+            password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
+            if Usermanage.check_account(account) do
+                resp_error(conn,"Duplicated account")
+            else
+                case Usermanage.insert_user(account, password) do
+                    {:ok , struct} ->  
+                        resp = %{
+                            status: "ok"
+                        }
+                        json conn, resp                          
+                    {:error, changeset} ->  message = error_parse(changeset.errors)
+                                            resp_error(conn, message)
+                                    _   ->  resp_error(conn,"Unknown")
+                end              
+            end
         end
+    end
+
+    defp error_parse(errors) do   #account, password parse
+        case errors do
+            [account: {message, detail}] ->  "Account #{message}"
+            [password: {message,detail}] ->  "Password #{message}"
+            [
+                account: {acc_message,acc_detail},
+                password: {pass_message,pass_detail}
+            ]                              
+                                -> "Account #{acc_message}, Password #{pass_message}"
+                        _       ->           "Unknown"
+        end
+    end
+
+    defp resp_error(conn,message) do
+        resp = %{
+            status: "error",
+            message: message
+        }
+        json conn, resp
+    end
+
+    defp resp_ok(conn, data ) do
+        resp = %{
+            status: "ok",
+            data: data
+        }
+        json conn, resp
     end
 
     def get_user(conn, _params) do
@@ -28,8 +74,11 @@ defmodule HelloWeb.ApiBankController do
         case verify_token(token) do
             {:ok, token_sub_id} ->
                 user = Usermanage.get_user_by_id(token_sub_id)
-                json conn, %{account: user.account, money: user.money}
-            _ ->  send_resp(conn, 404, "Not found")
+                resp_ok(conn,%{account: user.account, money: user.money})
+            {:error, message} -> 
+                resp_error(conn,message)
+            _ ->
+                resp_error(conn,"Unknown")
         end
     end
 
@@ -39,60 +88,139 @@ defmodule HelloWeb.ApiBankController do
         case verify_token(token) do
         {:ok, token_sub_id} ->
             if (Usermanage.get_user_by_id(token_sub_id) != nil) do
-                money = Usermanage.show_money(token_sub_id)
-                money = money + elem(Integer.parse(deposit),0)
-                Usermanage.update_money(token_sub_id,money)
-                json conn, %{money: money}
+                case validate_money(deposit) do
+                    {:ok, message} ->
+                        money = Usermanage.show_money(token_sub_id)
+                        money = money + elem(Integer.parse(deposit),0)
+                        case Usermanage.update_money(token_sub_id,money) do
+                            {:ok , struct}      ->  resp_ok(conn, %{money: money})
+                            {:error, changeset} ->  message = money_error_parse(changeset.errors)
+                                                        resp_error(conn, message)
+                                                _   ->  resp_error(conn,"Unknown")
+                        end
+                    {:error, message}   ->  resp_error(conn, message)
+                    _ ->  resp_error(conn,"Unknown")                            
+                end
+                #json conn, %{money: money}
             else
-                conn |> send_resp(401,"Unauthorized")
+                resp_error(conn,"User not found")
             end
-        {:error, reason} -> 
-            conn |> send_resp(401, reason)
+        {:error, message} -> 
+            resp_error(conn,message)
+        _ ->
+            resp_error(conn,"Unknown")    
         end
     end
 
+    defp money_error_parse(errors) do
+        case errors do
+            [money: {message}] -> "Money #{message}"
+            _ -> "Unknown"
+        end
+    end
+
+    defp validate_money(money) do
+        cond do
+        String.match?(money,~r/^\s*$/)      -> {:error, "Money can't be blank"}
+        !String.match?(money,~r/^[0-9]*$/ ) -> {:error, "Money must be positive number"}
+                                    true    -> {:ok, "Valid money"}
+        end
+    end
+
+    def sub_money(id,withdraw) do
+        money    = Usermanage.show_money(id)
+        withdraw = elem(Integer.parse(withdraw),0)        
+        if (money >= withdraw) do            
+            money    = money - withdraw
+            {:ok, money}
+        else
+            {:error, "Money in your account is not enough"}
+        end
+        
+    end
     def withdraw(conn, %{"withdraw"=> withdraw}) do
         token = get_token(conn)
         case verify_token(token) do
             {:ok, token_sub_id} ->
                 if (Usermanage.get_user_by_id(token_sub_id) != nil) do
-                    money = Usermanage.show_money(token_sub_id)
-                    money = money - elem(Integer.parse(withdraw),0)
-                    Usermanage.update_money(token_sub_id,money)
-                    json conn, %{money: money}
+                    case validate_money(withdraw) do
+                        {:ok,message} ->
+                            case sub_money(token_sub_id,withdraw) do
+                                {:ok, money} ->
+                                    case Usermanage.update_money(token_sub_id,money) do
+                                        {:ok , struct}      ->  resp_ok(conn, %{money: money})                                                             
+                                        {:error, changeset} ->  message = money_error_parse(changeset.errors)
+                                                                resp_error(conn, message)
+                                        _   ->  resp_error(conn,"Unknown")
+                                    end
+                                {:error, message} -> 
+                                    resp_error(conn, message)
+                            end                  
+                        {:error, message} ->  resp_error(conn, message)
+                        _ ->  resp_error(conn,"Unknown")
+                    end        
                 else
-                    conn |> send_resp(401,"Unauthorized")
+                    resp_error(conn,"User not found")
                 end
-            {:error, reason} -> 
-                conn |> send_resp(401, reason)
+            {:error, message} -> 
+                resp_error(conn,message)
+            _ ->
+                resp_error(conn,"Unknown")
         end
         # -------------------------------------------        
     end
 
     def transfer(conn,%{"receiverid"=>receiverid,"receivername"=>receivername,"money"=>money}) do
-        token = get_token(conn)
-        case verify_token(token) do
-            {:ok, token_sub_id} ->
-                if (Usermanage.get_user_by_id(token_sub_id) != nil) do
-                    money = elem(Integer.parse(money),0)
-                    if elem(Integer.parse(receiverid),0) == Usermanage.show_id(receivername) && token_sub_id !== receiverid do
-                        target_money = Usermanage.show_money(receiverid)
-                        source_money = Usermanage.show_money(token_sub_id)
-                        target_money = target_money + money
-                        source_money = source_money - money
-                        Usermanage.update_money(receiverid, target_money)
-                        Usermanage.update_money(token_sub_id,source_money)
-                        json conn, %{money: source_money}                  
-                    else 
-                        conn |> send_resp(406,"")
-                    end            
-                else
-                conn |> send_resp(403,"")
-                end
-            {:error, reason} -> 
-                conn |> send_resp(401, reason)
-        end
-        # ----------------------------------        
+        cond do
+            String.match?(receiverid ,~r/^\s*$/) -> 
+                resp_error(conn,"Receiver id can't be blank")
+            String.match?(receivername ,~r/^\s*$/) -> 
+                resp_error(conn,"Receiver name can't be blank")            
+            !String.match?(receiverid,~r/^[0-9]*$/ ) -> 
+                resp_error(conn,"Receiver's id must be number")
+            elem(Integer.parse(receiverid),0) !== Usermanage.show_id(receivername) ->
+                resp_error(conn,"Account and id are not matched")
+            true ->
+                token = get_token(conn)        
+                    case verify_token(token) do
+                        {:ok, token_sub_id} ->
+                            cond do
+                                token_sub_id === receiverid ->  
+                                    resp_error(conn,"Receiver id must differ form your id")
+                                Usermanage.get_user_by_id(token_sub_id) == nil -> 
+                                    resp_error(conn,"User not found")
+                                true ->
+                                    case validate_money(money) do
+                                        {:ok,message} ->
+                                            target_money = Usermanage.show_money(receiverid)
+                                            target_money = target_money + elem(Integer.parse(money),0)
+                                            case  sub_money(token_sub_id,money) do
+                                                {:ok, source_money} ->
+                                                    case Usermanage.update_money(token_sub_id, source_money) do
+                                                        {:ok , source_struct} ->
+                                                            case Usermanage.update_money(receiverid,target_money) do
+                                                                {:ok , target_struct} ->  resp_ok(conn, %{money: source_money})
+
+                                                                {:error, changeset} ->  message = money_error_parse(changeset.errors)
+                                                                                            resp_error(conn, message)
+                                                                                    _   ->  resp_error(conn,"Unknown")
+                                                            end
+                                                        {:error, changeset} ->  message = money_error_parse (changeset.errors)
+                                                            resp_error(conn, message)
+                                                        _ ->  resp_error(conn,"Unknown")
+                                                    end
+                                                {:error, message} ->
+                                                        resp_error(conn, message)
+                                            end
+                                        {:error, message}   ->  resp_error(conn, message)
+                                        _ ->  resp_error(conn,"Unknown")
+                                    end
+                            end 
+                        {:error, message} -> 
+                                resp_error(conn,message)
+                        _ -> resp_error(conn,"Unknown")
+                    end                                                                
+        end    
     end
 
     # SIGNIN
@@ -101,8 +229,10 @@ defmodule HelloWeb.ApiBankController do
         case token_sign_in(account,password) do
                 #{:ok, token, claims} -> json conn, %{accesstoken: token}
                     #{:ok, token, user_info}  ->  json conn, %{accesstoken: token, account: user_info.account, id: user_info.id, money: user_info.money}
-                    {:ok, token}  ->  json conn, %{accesstoken: token}
-                                _ ->  send_resp(conn, 404, "Not found")
+                    {:ok, token}  ->  
+                        data = %{accesstoken: token}
+                        resp_ok(conn,data)
+                    _ ->  resp_error(conn, "User not found")
             end
     end
 

@@ -31,7 +31,10 @@
                 <label >Account</label>
                 <input type="text" class="form-control" name="account" id="signin_account">
                 <label >Password</label>
-                <input type="password" class="form-control" name="password" id="signin_password"> 
+                <input type="password" class="form-control" name="password" id="signin_password">
+                </br>
+                <div id="signin-alert" style="display: none;" class="alert alert-danger" role="alert">
+                </div>
             </div>
             <div class="modal-footer">
             <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
@@ -50,18 +53,28 @@
                 <span aria-hidden="true">&times;</span>
             </button>
             </div>
-            <div class="modal-body">        
+            <div class="modal-body">
                 <label>Account</label>
                 <input class="form-control" type="text" name="account" id="signup_account">
+                </br>
+                <div class="alert alert-info" role="alert">Account can not be blank
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
                 <label>Password</label>
                 <input class="form-control" type="password" name="password" id="signup_password">
                 </br>
-                <div id="valid" style="display: none;" class="alert alert-warning alert-dismissible fade show" role="alert">Password must contain at least <strong>one number</strong>, <strong>one uppercase lowercase letter</strong>, and at least <strong>8 or more characters</strong>
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button></div>
+                <div class="alert alert-info" role="alert">Password must at least one number, one lowercase and one uppercase letter and at least 8 characters
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
                 <label>Confirm Password</label>
                 <input class="form-control" type="password" name="password" id="signup_confirm_password">
+                </br>
+                <div id="signup-alert" style="display: none;" class="alert alert-danger" role="alert">
+                </div>
             </div>
             <div class="modal-footer">
             <button id="signup-close" type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
