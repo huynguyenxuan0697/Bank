@@ -41,7 +41,7 @@ defmodule HelloWeb.Endpoint do
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
 
-  plug CORSPlug, origin: "http://localhost:5500"
+  plug CORSPlug, origin: "http://localhost:5501"
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options

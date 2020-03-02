@@ -173,7 +173,9 @@ defmodule HelloWeb.ApiBankController do
             String.match?(receiverid ,~r/^\s*$/) -> 
                 resp_error(conn,"Receiver id can't be blank")
             String.match?(receivername ,~r/^\s*$/) -> 
-                resp_error(conn,"Receiver name can't be blank")               
+                resp_error(conn,"Receiver name can't be blank")            
+            !String.match?(receiverid,~r/^[0-9]*$/ ) -> 
+                resp_error(conn,"Receiver's id must be number")
             elem(Integer.parse(receiverid),0) !== Usermanage.show_id(receivername) ->
                 resp_error(conn,"Account and id are not matched")
             id === receiverid ->  

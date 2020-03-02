@@ -1,41 +1,3 @@
-//   window.onload = init()
-//   function init(){
-//     user =  JSON.parse(localStorage.getItem("userInfo"))
-//     href_home   = 'http://localhost:4000/bank'
-//     href_signin = 'http://localhost:4000/bank/signin'
-//     href_signup = 'http://localhost:4000/bank/singup'
-//    if (user != null ) {
-//      href = `http://localhost:4000/bank/account/${user.id}/${user.account}`
-//      if (location.href != href ){
-//       location.replace(`http://localhost:4000/bank/account/${user.id}/${user.account}`)
-//      }else {
-//       user = JSON.parse(localStorage.getItem("userInfo"))
-//       document.getElementById("user_name").innerHTML  = user.account
-//       document.getElementById("user_money").innerHTML = user.money
-//      }
-//     }
-//     else{
-//       if(location.hash) {
-//         hash = location.hash.substr(1)
-//         list = hash.split("&")
-//         token = list[0].split("=")[1]
-//         axios({
-//           method:'post',
-//           url:'http://localhost:4000/api/bank/FacebookHandler',
-//           data:{
-//             "accesstoken": token
-//           }
-//         }).then(result=>{
-//           result.data.account = xoa_dau(result.data.account)
-//           localStorage.setItem("userInfo",JSON.stringify(result.data))
-//           location.reload()
-//         }).catch(error => console.log(error.response))
-//       }
-//         else if (location.href !=  href_home && location.href !=  href_signin && location.href !=  href_signup){
-//         location.replace(href_home)
-//       }
-//     }
-//   }
 
 signinHandler = () => {
   account = document.getElementById("signin_account").value;
@@ -52,6 +14,10 @@ signinHandler = () => {
       if (resp.data.status === "ok" ){                
         localStorage.setItem("userInfo", JSON.stringify(resp.data.data));
         homeHandler();
+      } else {
+        alert = document.getElementById("signinAlert")
+        alert.className = "alert alert-danger"
+        alert.innerHTML = resp.data.message
       }
     })
     .catch(error => console.log(error));
@@ -90,41 +56,55 @@ signupHandler = () => {
 depositHandler = () => {
   user = JSON.parse(localStorage.getItem("userInfo"));
   money = document.getElementById("deposit_money").value;
-  axios({
-    method: "post",
-    url: "http://localhost:4000/api/bank/Deposit",
-    data: {
-      id: user.id,
-      deposit: money
-    },
-    headers: {
-      Authorization: `Bearer ${user.accesstoken}`
-    }
-  })
-    .then(result => {
-      renderHTML(result.data.data.money);
+  if( depositValidate() ){
+    axios({
+      method: "post",
+      url: "http://localhost:4000/api/bank/Deposit",
+      data: {
+        id: user.id,
+        deposit: money
+      },
+      headers: {
+        Authorization: `Bearer ${user.accesstoken}`
+      }
     })
-    .catch(error => console.log(error));
+      .then(resp => {
+        if (resp.data.status === "ok"){
+          renderHTML(resp.data.data.money);
+        } else {
+          alert(resp.data.message)
+        }
+      })
+      .catch(error => console.log(error));
+  } 
+  
 };
 
 withdrawHandler = () => {
   user = JSON.parse(localStorage.getItem("userInfo"));
   money = document.getElementById("withdraw_money").value;
-  axios({
-    method: "post",
-    url: "http://localhost:4000/api/bank/Withdraw",
-    data: {
-      id: user.id,
-      withdraw: money
-    },
-    headers: {
-      authorization: `Bearer ${user.accesstoken}`
-    }
-  })
-    .then(result => {
-      renderHTML(result.data.data.money);
+  if(withdrawValidate() ){
+    axios({
+      method: "post",
+      url: "http://localhost:4000/api/bank/Withdraw",
+      data: {
+        id: user.id,
+        withdraw: money
+      },
+      headers: {
+        authorization: `Bearer ${user.accesstoken}`
+      }
     })
-    .catch(error => console.log(error));
+      .then(resp => {
+        if (resp.data.status === "ok"){
+          renderHTML(resp.data.data.money);
+        } else {
+          alert(resp.data.message)
+        }
+      }) 
+      .catch(error => console.log(error));
+  }
+  
 };
 
 transferHandler = () => {
@@ -145,8 +125,12 @@ transferHandler = () => {
       authorization: `Bearer ${user.accesstoken}`
     }
   })
-    .then(result => {
-      renderHTML(result.data.data.money);
+    .then(resp => {
+      if(resp.data.status === "ok"){
+        renderHTML(resp.data.data.money);
+      } else {
+        alert(resp.data.message)
+      }
     })
     .catch(error => console.log(error));
 };
@@ -182,6 +166,7 @@ xoa_dau = str => {
 
 renderHTML = (money) => {
     userInfo = JSON.parse(localStorage.getItem("userInfo"))
+    
     document.getElementById("main").innerHTML = `
         <div class="container">
         <h2>User: ${userInfo.account} </h2>
@@ -201,13 +186,14 @@ renderHTML = (money) => {
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
-                <div class="modal-body">        
+                <div class="modal-body">  
+                      <div id ="depositAlert"></div>      
                       <label for="money">Money</label>
-                      <input class="form-control" name="deposit" id="deposit_money"></input>    
+                      <input class="form-control" name="deposit" id="deposit_money" onblur="depositValidate()" ></input>    
                 </div>
                 <div class="modal-footer">
                   <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                  <button  class="btn btn-primary" onclick = "depositHandler()" data-dismiss="modal">Deposit</button>
+                  <button  class="btn btn-primary" onclick = "depositHandler()"  id="depositSubmit" data-dismiss="modal" disabled>Deposit</button>
                 </div>   
               </div>
             </div>
@@ -224,12 +210,13 @@ renderHTML = (money) => {
                   </button>
                 </div>
                 <div class="modal-body">
+                      <div id= "withdrawAlert"></div>
                       <label>Money</label>
-                      <input class="form-control" name="withdraw" id="withdraw_money"></input>        
+                      <input class="form-control" name="withdraw" id="withdraw_money" onblur="withdrawValidate()"></input>        
                 </div>
                 <div class="modal-footer">
                   <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                  <button  class="btn btn-primary" onclick="withdrawHandler()" data-dismiss="modal">Withdraw</button>
+                  <button  class="btn btn-primary" onclick="withdrawHandler()" data-dismiss="modal" id="withdrawSubmit" disabled>Withdraw</button>
                 </div>  
               </div>
             </div>
@@ -249,7 +236,7 @@ renderHTML = (money) => {
                       <label>Receiver's id</label>
                       <input class="form-control" id="receiver_id" />
                       <label>Reveiver's name</label>
-                      <input class="form-control" id="receiver_name">
+                      <input class="form-control" id="receiver_name" >
                       <label for="money">Money</label>
                       <input class="form-control"  id="transfer_money"></input>        
                 </div>
@@ -308,6 +295,7 @@ renderSigninHTML = () => {
   document.getElementById("main").innerHTML = `
     <div class="container signin">
         <h1 class="text-center">Sign in</h1>
+        <div id="signinAlert"></div>
         <div class="form-group">
           <label>Account</label>
           <input
@@ -363,7 +351,7 @@ accountValidate = () => {
     return false
   } else if ( !account.match("^[a-zA-Z0-9_]*$") ){ //just have character and number
     alert.className = "alert alert-danger"
-    alert.innerHTML = "Account has special symbol"
+    alert.innerHTML = "Account should has alphabet and number character"
     return false
   } else {
     alert.className = "alert alert-success"
@@ -390,5 +378,91 @@ passwordValidate = () => {
     alert.innerHTML = "Checked"
     return true
   }
+};
+depositValidate = () =>{
+  money = document.getElementById("deposit_money").value
+  alert = document.getElementById("depositAlert")
+  button = document.getElementById("depositSubmit")
+  if ( money.match("^\s*$") ){
+      alert.className = "alert alert-danger"
+      alert.innerHTML = "Money can't be blank"
+      return false
+  } else if( !money.match("^[0-9]*$")) {
+    alert.className = "alert alert-danger"
+    alert.innerHTML = "Money must be positive number"
+      return false
+  } else{
+    alert.className = ""
+    alert.innerHTML = ""
+    button.disabled = false
+      return true
+  }
 }
+withdrawValidate = () => {
+  money = document.getElementById("withdraw_money").value
+  alert = document.getElementById("withdrawAlert")
+  button = document.getElementById("withdrawSubmit")
+  if ( money.match("^\s*$") ){
+      alert.className = "alert alert-danger"
+      alert.innerHTML = "Money can't be blank"
+      return false
+  } else if( !money.match("^[0-9]*$")) {
+    alert.className = "alert alert-danger"
+    alert.innerHTML = "Money must be positive number"
+      return false
+  } else{
+    alert.className = ""
+    alert.innerHTML = ""
+    button.disabled = false
+      return true
+  }
+}
+
 window.onload = homeHandler();
+
+
+
+
+
+
+
+
+
+//   window.onload = init()
+//   function init(){
+//     user =  JSON.parse(localStorage.getItem("userInfo"))
+//     href_home   = 'http://localhost:4000/bank'
+//     href_signin = 'http://localhost:4000/bank/signin'
+//     href_signup = 'http://localhost:4000/bank/singup'
+//    if (user != null ) {
+//      href = `http://localhost:4000/bank/account/${user.id}/${user.account}`
+//      if (location.href != href ){
+//       location.replace(`http://localhost:4000/bank/account/${user.id}/${user.account}`)
+//      }else {
+//       user = JSON.parse(localStorage.getItem("userInfo"))
+//       document.getElementById("user_name").innerHTML  = user.account
+//       document.getElementById("user_money").innerHTML = user.money
+//      }
+//     }
+//     else{
+//       if(location.hash) {
+//         hash = location.hash.substr(1)
+//         list = hash.split("&")
+//         token = list[0].split("=")[1]
+//         axios({
+//           method:'post',
+//           url:'http://localhost:4000/api/bank/FacebookHandler',
+//           data:{
+//             "accesstoken": token
+//           }
+//         }).then(result=>{
+//           result.data.account = xoa_dau(result.data.account)
+//           localStorage.setItem("userInfo",JSON.stringify(result.data))
+//           location.reload()
+//         }).catch(error => console.log(error.response))
+//       }
+//         else if (location.href !=  href_home && location.href !=  href_signin && location.href !=  href_signup){
+//         location.replace(href_home)
+//       }
+//     }
+//   }
