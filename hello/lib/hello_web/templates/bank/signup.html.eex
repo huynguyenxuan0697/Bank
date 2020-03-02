@@ -1,11 +1,11 @@
 <div class="phx-hero">
-  <h1>Sign up</h1>
+  <h1 >Sign up</h1>
     <div class="alert alert-danger" role="alert" id="signup_alert"></div>
     <label for="account">Account</label>
     <input type="text" name="account" id="signup_account" required>
     <label for="password">Password</label>
     <input type="password" name="password" id="signup_password" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" required>
-    <button class="btn btn-success" onclick="signupHandler()">Sign up </button>
+    <button type="submit" class="btn btn-success" onclick="signupHandler()">Sign up </button>
     
 </div>
 

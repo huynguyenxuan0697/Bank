@@ -1,3 +1,3 @@
 defmodule HelloWeb.BankView do
-    use HelloWeb, :view
-  end
+  use HelloWeb, :view
+end

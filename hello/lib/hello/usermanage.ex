@@ -1,34 +1,38 @@
 defmodule Hello.Usermanage do
-    use Ecto.Schema
-    import Ecto.Query
-    import Ecto.Changeset
-    alias Hello.{Usermanage,Repo}
-    
+  use Ecto.Schema
+  import Ecto.Query
+  import Ecto.Changeset
+  alias Hello.{Usermanage, Repo}
 
-    schema "users" do
-      field :account, :string
-      field :password, :string
-      field :money, :integer
-    end
-    @doc false
-    def changeset(%Usermanage{} = user, attrs) do
-      user
-      |> cast(attrs,[:account, :password, :money])
-      |> validate_required([:money])
-    end
+  @psw_secret "sfowieru091203921idsadfijljxzvcz00zaalkNDSADLKS09800DZMXCMkmsfasdfas123131dffd332d+_="
 
-    def insert_changeset(%Usermanage{}=user, attrs) do
-      user
-      |> cast(attrs,[:account, :password, :money])
-      |> validate_required([:account, :password])
-      |> validate_length(:password, min: 8)
-      |> unique_constraint(:account)
+  schema "users" do
+    field :account, :string
+    field :password, :string
+    field :money, :integer
+  end
 
-    end
-    
+  @doc false
+  def changeset(%Usermanage{} = user, params \\ %{}) do
+    user
+    |> cast(params, [:account, :password, :money])
+    |> validate_required([:money])
+  end
 
-    
+  def insert_changeset(%Usermanage{} = user, params \\ %{}) do
+    user
+    |> cast(params, [:account, :password, :money])
+    |> validate_required([:account, :password])
+    |> validate_length(:password, min: 7)
+    |> unique_constraint(:account)
+  end
 
+  def money_changeset(%Usermanage{} = user, params \\ %{}) do
+    user
+    |> cast(params, [:money])
+    |> validate_required([:money])
+    |> check_constraint(:money, name: :money_must_be_positive)
+  end
 
   def show_id(account) do
     Usermanage
@@ -49,17 +53,19 @@ defmodule Hello.Usermanage do
   end
 
   def check_user(account, password) do
-    id = Usermanage
-    |> where([u], u.account == ^account and u.password == ^password)
-    |> select([u], u.id)
-    |> Repo.one()
+    id =
+      Usermanage
+      |> where([u], u.account == ^account and u.password == ^password)
+      |> select([u], u.id)
+      |> Repo.one()
   end
 
-  def check_account(account) do 
-    id = Usermanage
-    |> where([u], u.account == ^account)
-    |> select([u], u.id)
-    |> Repo.one()
+  def check_account(account) do
+    id =
+      Usermanage
+      |> where([u], u.account == ^account)
+      |> select([u], u.id)
+      |> Repo.one()
   end
 
   def show_money(id) do
@@ -69,10 +75,9 @@ defmodule Hello.Usermanage do
     |> Repo.one()
   end
 
-
-  def update_money(id,money) do
-      params = %{money: money}
-      changeset = changeset(%Usermanage{id: elem(Integer.parse(id),0)},params)
-      Repo.update(changeset)
+  def update_money(id, money) do
+    params = %{money: money}
+    changeset = money_changeset(%Usermanage{id: elem(Integer.parse(id), 0)}, params)
+    Repo.update(changeset)
   end
 end

@@ -91,9 +91,6 @@
       }).catch(error => console.log(error))
     }
 
-
-
-
         function signupHandler(){
       account = document.getElementById("signup_account").value
       password = document.getElementById("signup_password").value
@@ -127,7 +124,7 @@
     }).then(result=>{
         user.money = result.data.money
         localStorage.setItem("userInfo",JSON.stringify(user))
-        location.href =`http://localhost:4000/bank/account/${user.id}/${user.account}`
+       // location.href =`http://localhost:4000/bank/account/${user.id}/${user.account}`
     }).catch(error => console.log(error))
 }
 
@@ -150,9 +147,7 @@ function withdrawHandler(){
         location.href = `http://localhost:4000/bank/account/${user.id}/${user.account}`
     }).catch(error => console.log(error))
 }
-
-
-  
+ 
 function transferHandler(){
     user         = JSON.parse(localStorage.getItem("userInfo")) 
     money        = document.getElementById("transfer_money").value
