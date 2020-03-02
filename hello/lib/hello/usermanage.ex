@@ -75,6 +75,8 @@ defmodule Hello.Usermanage do
     |> Repo.one()
   end
 
+  
+
   def update_money(id, money) do
     params = %{money: money}
     changeset = money_changeset(%Usermanage{id: elem(Integer.parse(id), 0)}, params)

@@ -246,7 +246,7 @@ defmodule HelloWeb.ApiBankController do
         case token_sign_in(account,password) do
             #  {:ok, token, claims} -> json conn, %{accesstoken: token}
                     {:ok, token, user_info}  ->  
-                        data = %{accesstoken: token, account: user_info.account, id: user_info.id, money: user_info.money}
+                        data = %{accesstoken: token, id: user_info.id, account: user_info.account}
                         resp_ok(conn, data)
                     _ ->  
                         resp_error(conn,"Account or password is not true")
