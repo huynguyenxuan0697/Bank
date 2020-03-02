@@ -142,7 +142,7 @@ logoutHandler = () => {
 
 loginWithFacebookHandler = () => {
   location.href =
-    "https://www.facebook.com/v6.0/dialog/oauth?client_id=197695828014122&redirect_uri=http://localhost:4000/bank&state=st=state123abc,ds=123456789&response_type=token";
+    "https://www.facebook.com/v6.0/dialog/oauth?client_id=197695828014122&redirect_uri=http://localhost:5501/index.html&state=st=state123abc,ds=123456789&response_type=token";
 };
 
 xoa_dau = str => {
@@ -253,7 +253,7 @@ renderIndexHTML = () => {
   document.getElementById("main").innerHTML = `
     <div class="container">
           <button class="btn btn-primary" onclick="renderSigninHTML()">Sign in</button>            
-          <button class="btn btn-primary" >Sign in with Facebook</button>            
+          <button class="btn btn-primary" onclick="loginWithFacebookHandler()" >Sign in with Facebook</button>            
           <button class="btn btn-primary" onclick="renderSignupHTML()">Sign up</button>      
       </div>`;
 };
@@ -418,8 +418,26 @@ withdrawValidate = () => {
   }
 }
 
-window.onload = homeHandler();
-
+window.onload = () =>{
+        if(location.hash) {
+        hash = location.hash.substr(1)
+        list = hash.split("&")
+        token = list[0].split("=")[1]
+        axios({
+          method:'post',
+          url:'http://localhost:4000/api/bank/FacebookHandler',
+          data:{
+            "accesstoken": token
+          }
+        }).then(resp=>{
+          resp.data.data.account = xoa_dau(resp.data.data.account)
+          localStorage.setItem("userInfo",JSON.stringify(resp.data.data))          
+        }).catch(error => console.log(error.response))
+        }
+        homeHandler();
+}
+        
+    
 
 
 
