@@ -142,7 +142,7 @@ logoutHandler = () => {
 
 loginWithFacebookHandler = () => {
   location.href =
-    "https://www.facebook.com/v6.0/dialog/oauth?client_id=197695828014122&redirect_uri=http://localhost:5501/index.html&state=st=state123abc,ds=123456789&response_type=token";
+    "https://www.facebook.com/v6.0/dialog/oauth?client_id=197695828014122&redirect_uri=http://localhost:5501/index.html&state=st=state123abc,ds=123456789&response_type=token&auth_type=rerequest&scope=email";
 };
 
 xoa_dau = str => {
@@ -432,9 +432,12 @@ window.onload = () =>{
         }).then(resp=>{
           resp.data.data.account = xoa_dau(resp.data.data.account)
           localStorage.setItem("userInfo",JSON.stringify(resp.data.data))          
+          homeHandler();
         }).catch(error => console.log(error.response))
+        } else {
+          homeHandler();
+
         }
-        homeHandler();
 }
         
     
@@ -444,43 +447,3 @@ window.onload = () =>{
 
 
 
-
-
-//   window.onload = init()
-//   function init(){
-//     user =  JSON.parse(localStorage.getItem("userInfo"))
-//     href_home   = 'http://localhost:4000/bank'
-//     href_signin = 'http://localhost:4000/bank/signin'
-//     href_signup = 'http://localhost:4000/bank/singup'
-//    if (user != null ) {
-//      href = `http://localhost:4000/bank/account/${user.id}/${user.account}`
-//      if (location.href != href ){
-//       location.replace(`http://localhost:4000/bank/account/${user.id}/${user.account}`)
-//      }else {
-//       user = JSON.parse(localStorage.getItem("userInfo"))
-//       document.getElementById("user_name").innerHTML  = user.account
-//       document.getElementById("user_money").innerHTML = user.money
-//      }
-//     }
-//     else{
-//       if(location.hash) {
-//         hash = location.hash.substr(1)
-//         list = hash.split("&")
-//         token = list[0].split("=")[1]
-//         axios({
-//           method:'post',
-//           url:'http://localhost:4000/api/bank/FacebookHandler',
-//           data:{
-//             "accesstoken": token
-//           }
-//         }).then(result=>{
-//           result.data.account = xoa_dau(result.data.account)
-//           localStorage.setItem("userInfo",JSON.stringify(result.data))
-//           location.reload()
-//         }).catch(error => console.log(error.response))
-//       }
-//         else if (location.href !=  href_home && location.href !=  href_signin && location.href !=  href_signup){
-//         location.replace(href_home)
-//       }
-//     }
-//   }
