@@ -4,7 +4,7 @@ signinHandler = () => {
   password = document.getElementById("signin_password").value;
   axios({
     method: "post",
-    url: "http://localhost:4000/api/bank/Signin",
+    url: "http://localhost:4000/api/bank/signin",
     data: {
       account: account,
       password: password
@@ -22,14 +22,13 @@ signinHandler = () => {
     })
     .catch(error => console.log(error));
 };
-
 signupHandler = () => {
   if ( accountValidate() && passwordValidate() ){
     account = document.getElementById("signup_account").value;
     password = document.getElementById("signup_password").value;
     axios({
       method: "post",
-      url: "http://localhost:4000/api/bank/Signup",
+      url: "http://localhost:4000/api/bank/signup",
       data: {
         account: account,
         password: password
@@ -52,16 +51,14 @@ signupHandler = () => {
       });
   }
 };
-
 depositHandler = () => {
   user = JSON.parse(localStorage.getItem("userInfo"));
   money = document.getElementById("deposit_money").value;
   if( depositValidate() ){
     axios({
       method: "post",
-      url: "http://localhost:4000/api/bank/Deposit",
-      data: {
-        id: user.id,
+      url: "http://localhost:4000/api/bank/deposit",
+      data: {        
         deposit: money
       },
       headers: {
@@ -79,16 +76,14 @@ depositHandler = () => {
   } 
   
 };
-
 withdrawHandler = () => {
   user = JSON.parse(localStorage.getItem("userInfo"));
   money = document.getElementById("withdraw_money").value;
   if(withdrawValidate() ){
     axios({
       method: "post",
-      url: "http://localhost:4000/api/bank/Withdraw",
+      url: "http://localhost:4000/api/bank/withdraw",
       data: {
-        id: user.id,
         withdraw: money
       },
       headers: {
@@ -106,7 +101,6 @@ withdrawHandler = () => {
   }
   
 };
-
 transferHandler = () => {
   user = JSON.parse(localStorage.getItem("userInfo"));
   money = document.getElementById("transfer_money").value;
@@ -114,12 +108,11 @@ transferHandler = () => {
   receiverId = document.getElementById("receiver_id").value;
   axios({
     method: "post",
-    url: "http://localhost:4000/api/bank/Transfer",
+    url: "http://localhost:4000/api/bank/transfer",
     data: {
       receiverid: receiverId,
       receivername: receiverName,
-      money: money,
-      id: user.id
+      money: money,    
     },
     headers: {
       authorization: `Bearer ${user.accesstoken}`
@@ -134,17 +127,14 @@ transferHandler = () => {
     })
     .catch(error => console.log(error));
 };
-
 logoutHandler = () => {
   localStorage.removeItem("userInfo");
   renderIndexHTML();
 };
-
 loginWithFacebookHandler = () => {
   location.href =
     "https://www.facebook.com/v6.0/dialog/oauth?client_id=197695828014122&redirect_uri=http://localhost:5501/index.html&state=st=state123abc,ds=123456789&response_type=token&auth_type=rerequest&scope=email";
 };
-
 xoa_dau = str => {
   str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
   str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
@@ -163,13 +153,11 @@ xoa_dau = str => {
   str = str.split(" ").join("");
   return str;
 };
-
-renderHTML = (money) => {
+renderHTML = (money) => {    
     userInfo = JSON.parse(localStorage.getItem("userInfo"))
-    
     document.getElementById("main").innerHTML = `
         <div class="container">
-        <h2>User: ${userInfo.account} </h2>
+        <h2 >User: ${userInfo.account}</h2>
         <p style="font-size:50px"> Money in account : ${money} </p>
         <a><button  class="btn btn-success" data-toggle="modal" data-target="#deposit">Deposit money</button></a>
         <a><button  class="btn btn-primary" data-toggle="modal" data-target="#withdraw">Withdrawals</button></a>
@@ -322,26 +310,6 @@ renderSigninHTML = () => {
       </div>
 `;
 };
-homeHandler = () => {
-  user = JSON.parse(localStorage.getItem("userInfo"));
-  if (user) {
-    axios({
-      method: "post",
-      url: "http://localhost:4000/api/bank/GetUserInfo",
-      data: {
-        id: user.id
-      },
-      headers: {
-        authorization: `Bearer ${user.accesstoken}`
-      }
-    }).then(result => { 
-        userInfo = result.data.data      
-        renderHTML(userInfo.money);
-      }).catch(error => console.log(error));
-  } else {
-    renderIndexHTML();
-  }
-};
 accountValidate = () => {
   account = document.getElementById("signup_account").value
   alert = document.getElementById("accountAlert")
@@ -417,7 +385,23 @@ withdrawValidate = () => {
       return true
   }
 }
-
+homeHandler = () => {
+  user = JSON.parse(localStorage.getItem("userInfo"));
+  if (user) {
+    axios({
+      method: "get",
+      url: "http://localhost:4000/api/bank/getuserinfo",
+      headers: {
+        authorization: `Bearer ${user.accesstoken}`
+      }
+    }).then(result => { 
+        userInfo = result.data.data        
+        renderHTML(userInfo.money);
+      }).catch(error => console.log(error));
+  } else {
+    renderIndexHTML();
+  }
+};
 window.onload = () =>{
         if(location.hash) {
         hash = location.hash.substr(1)

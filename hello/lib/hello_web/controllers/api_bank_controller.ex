@@ -16,6 +16,7 @@ defmodule HelloWeb.ApiBankController do
     @secret_key "UTELcvSwFT9t7u51SxExjsnUXjXTLFCHnUKx5trjsKjQLllCr9PwARorGZRILp56"
     @life_time  60   # minute
 
+    
     def show_all(conn, _params) do
         users = Repo.all(Usermanage)
                 |> Enum.map(fn struct -> struct_to_map(struct)  end)
@@ -79,39 +80,10 @@ defmodule HelloWeb.ApiBankController do
         conn |> json resp
     end
 
-    def deposit(conn, %{"id"=> id,"deposit"=> deposit}) do
-        token = get_token(conn)
-        id = Integer.to_string(id)
-        case verify_token(token) do
-        {:ok, token_sub_id} ->
-            cond do
-                (token_sub_id != id )  ->
-                    resp_error(conn,"Accesstoken don't come with this id")
-                true ->
-                    case validate_money(deposit) do
-                        {:ok,message}       ->  
-                            money = add_money(id,deposit)                            
-                            # 
-                            case Usermanage.update_money(id,money) do
-                                {:ok , struct}      ->  resp_ok(conn, %{money: money})                                                              
-                                {:error, changeset} ->  message = money_error_parse(changeset.errors)
-                                                        resp_error(conn, message)
-                                                _   ->  resp_error(conn,"Unknown")
-                            end
-                        {:error, message}   ->  resp_error(conn, message)
-                            _               ->  resp_error(conn,"Unknown")
-                    end                    
-            end
-        {:error, message} -> 
-            resp_error(conn,message)
-        _ ->
-            resp_error(conn,"Unknown")
-        end
-    end
-
     defp add_money(id,deposit) do
         money = Usermanage.show_money(id)
-        money = money + elem(Integer.parse(deposit),0)        
+        money = money + elem(Integer.parse(deposit),0)
+        {:ok, money}        
     end
 
     def sub_money(id,withdraw) do
@@ -121,54 +93,55 @@ defmodule HelloWeb.ApiBankController do
             money    = money - withdraw
             {:ok, money}
         else
-            {:error, "Money in your account is not enough"}
+            {:money_error, "Money in your account is not enough"}
         end
         
     end
-
-    defp validate_money(money) do
+   
+    defp validate_money(money) when is_binary(money) do
         cond do
-        String.match?(money,~r/^\s*$/)      -> {:error, "Money can't be blank"}
-        !String.match?(money,~r/^[0-9]*$/ ) -> {:error, "Money must be positive number"}
-                                    true    -> {:ok, "Valid money"}
+        String.match?(money,~r/^\s*$/)      -> {:money_error, "Money can't be blank"}
+        !String.match?(money,~r/^[0-9]*$/ ) -> {:money_error, "Money must be positive number"}
+                                    true    -> {:ok, money}
         end
     end
 
-    def withdraw(conn, %{"id"=> id,"withdraw"=> withdraw}) do
-        token = get_token(conn)
-        id = Integer.to_string(id)
-        case verify_token(token) do
-            {:ok, token_sub_id} ->
-                cond do
-                    (token_sub_id != id )  ->
-                        resp_error(conn,"Accesstoken don't come with this id")
-                    true ->
-                        case validate_money(withdraw) do
-                            {:ok,message}       ->                                  
-                                case sub_money(id,withdraw) do
-                                    {:ok, money} ->
-                                        case Usermanage.update_money(id,money) do
-                                            {:ok , struct}      ->  resp_ok(conn, %{money: money})                                                              
-                                            {:error, changeset} ->  message = money_error_parse(changeset.errors)
-                                                                    resp_error(conn, message)
-                                                            _   ->  resp_error(conn,"Unknown")
-                                        end
-                                    {:error, message} -> 
+    #Deposit , withdraw, transfer ________________________________________________
+    def deposit(conn, %{"deposit"=> deposit}) do
+        id = conn.assigns[:id]
+        with(
+            {:ok, money}  <- validate_money(deposit),
+            {:ok, money}  <- add_money(id,money),
+            {:ok,struct}  <-  Usermanage.update_money(id,money)  
+        ) do
+            resp_ok(conn, %{money: money})
+        else
+            {:money_error,message} -> resp_error(conn, message)
+                {:error, changeset} ->  message = money_error_parse(changeset.errors)
                                         resp_error(conn, message)
-                                end                                                                                          
-                            {:error, message}   ->  resp_error(conn, message)
-                                _               ->  resp_error(conn,"Unknown")
-                        end                    
-                end
-           {:error, message} -> 
-            resp_error(conn,message)
-            _ ->
-            resp_error(conn,"Unknown")
-            end   
+                        _           -> resp_error(conn,"Unknown")
+        end                          
     end
 
-    def transfer(conn,%{"receiverid"=>receiverid,"receivername"=>receivername,"money"=>money,"id"=>id}) do
-        id = Integer.to_string(id)
+    def withdraw(conn, %{"withdraw"=> withdraw}) do
+        id = conn.assigns[:id]  
+        with(
+            {:ok,money} <- validate_money(withdraw),
+            {:ok, money} <- sub_money(id,withdraw),
+            {:ok , struct} <- Usermanage.update_money(id,money)
+        ) do
+            resp_ok(conn, %{money: money})
+        else
+            {:money_error,message} -> resp_error(conn,message)
+            {:error, changeset} ->  message = money_error_parse(changeset.errors)
+                                        resp_error(conn, message)
+                        _           -> resp_error(conn,"Unknown")
+        end
+
+    end   
+
+    def transfer(conn,%{"receiverid"=>receiverid,"receivername"=>receivername,"money"=>money}) do
+        id = conn.assigns[:id]
         cond do
             String.match?(receiverid ,~r/^\s*$/) -> 
                 resp_error(conn,"Receiver id can't be blank")
@@ -177,97 +150,45 @@ defmodule HelloWeb.ApiBankController do
             !String.match?(receiverid,~r/^[0-9]*$/ ) -> 
                 resp_error(conn,"Receiver's id must be number")
             elem(Integer.parse(receiverid),0) !== Usermanage.show_id(receivername) ->
-                resp_error(conn,"Account and id are not matched")
-            id === receiverid ->  
-                resp_error(conn,"Receiver id is must different than your id")
-            true    -> # Processing token and money                    
-                    token = get_token(conn)        
-                    case verify_token(token) do
-                        {:ok, token_sub_id} ->        
-                                cond do 
-                                    token_sub_id != id    -> 
-                                        resp_error(conn,"Accesstoken don't come with this id")
-                                    true   -> 
-                                        case validate_money(money) do
-                                            {:ok,message}       ->  
-                                                target_money = add_money(receiverid,money)
-                                                case  sub_money(id,money) do
-                                                    {:ok, source_money} ->
-                                                        case Usermanage.update_money(id, source_money) do
-                                                            {:ok , source_struct}      ->  
-                                                                case Usermanage.update_money(receiverid,target_money) do
-                                                                    {:ok , target_struct}      ->  resp_ok(conn, %{money: source_money})                                                              
-                                                                    {:error, changeset} ->  message = money_error_parse(changeset.errors)
-                                                                                            resp_error(conn, message)
-                                                                                    _   ->  resp_error(conn,"Unknown")
-                                                                end
-                                                            {:error, changeset} ->  message = money_error_parse(changeset.errors)
-                                                                                    resp_error(conn, message)
-                                                                            _   ->  resp_error(conn,"Unknown")
-                                                        end
-                                                    {:error, message} ->
-                                                        resp_error(conn, message)
-                                                end                                                        
-                                                
-                                                
-                                            {:error, message}   ->  resp_error(conn, message)
-                                                _               ->  resp_error(conn,"Unknown")
-                                        end              
-                                end   
-                        {:error, message} -> 
-                            resp_error(conn,message)
-                        _ ->
-                            resp_error(conn,"Unknown")
-            end                     
-        end            
-    end
-
-    def get_user_info(conn,%{"id"=>id}) do
-        token = get_token(conn)
-        id = Integer.to_string(id)
-        case verify_token(token) do
-            {:ok, token_sub_id} ->
-                if (token_sub_id == id ) do
-                    user = Usermanage.get_user(id) |> struct_to_map() |> Map.drop([:password]) 
-                    resp_ok(conn,user)
+                resp_error(conn,"Account and id are not matched")           
+            true    -> 
+                with(
+                    {:ok, money} <-  validate_money(money),
+                    {:ok, target_money} <- add_money(receiverid,money),
+                    {:ok, source_money} <- sub_money(id,money),
+                    {:ok, source_struct} <- Usermanage.update_money(id, source_money),
+                    {:ok, target_struct} <- Usermanage.update_money(receiverid,target_money)
+                ) do 
+                    resp_ok(conn, %{money: source_money})
                 else
-                    resp_error(conn,"Accesstoken doesn;t come with this id")
+                    {:money_error, message} -> resp_error(conn,message)
+                    {:error,changeset}   ->     message = money_error_parse(changeset.errors)
+                                                resp_error(conn, message)
+                                    _ -> resp_error(conn,"Unknown")
                 end
-            {:error, message} -> 
-                resp_error(conn,message)
-            _ ->
-                resp_error(conn,"Unknown")
-            end
 
 
+                                                                               
+        end                     
+    end            
+    #_____________________________________________________________________________
 
+    def get_user_info(conn,_params) do
+        id = conn.assigns[:id]
+        user = Usermanage.get_user(id) |> struct_to_map() |> Map.drop([:password]) 
+        resp_ok(conn,user)                        
     end
-    
+    # Sigin _____________________________________________________________________
     def signin(conn,%{"account"=>account,"password"=>password})  do
         password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
         case token_sign_in(account,password) do
             #  {:ok, token, claims} -> json conn, %{accesstoken: token}
                     {:ok, token, user_info}  ->  
-                        data = %{accesstoken: token, id: user_info.id, account: user_info.account}
+                        data = %{accesstoken: token, account: account}
                         resp_ok(conn, data)
                     _ ->  
                         resp_error(conn,"Account or password is not true")
             end
-    end
-
-    defp struct_to_map(struct) do
-        struct
-        |> Map.from_struct()
-        |> Map.drop([:__meta__])
-    end
-
-    def verify_account_password(account,password) do
-        id = Usermanage.check_user(account,password)
-        if is_nil(id) do
-            {:error, "Account or password not true"}
-        else
-            {:ok, id}
-        end
     end
 
     def token_sign_in(account,password) do
@@ -278,16 +199,7 @@ defmodule HelloWeb.ApiBankController do
                     _ ->  {:error, :unauthorized}
         end
     end
-
-    def verify_token(token) do
-        # case Guardian.decode_and_verify(token) do
-        case jwt_decode(token) do
-        {:ok, data}       -> {:ok, data}
-        {:error, message} -> {:error, message}
-                  _       -> {:error, "Unknown"}
-        end
-    end
- 
+  
     def jwt_encode(user) do
         # -------------- header ---------------------
         header = %{
@@ -313,57 +225,22 @@ defmodule HelloWeb.ApiBankController do
         jwt_signature = :crypto.hmac(:sha256, @secret_key, signature) |> Base.url_encode64()
         token = jwt_header<>"."<>jwt_claim<>"."<>jwt_signature
         token
+    end    
+    #_____________________________________________________________________________
+    defp struct_to_map(struct) do
+        struct
+        |> Map.from_struct()
+        |> Map.drop([:__meta__])
     end
 
-    def jwt_decode(token) do
-        [jwt_header,jwt_claim,jwt_signature]=String.split(token,".", parts: 3) 
-        plain_text         = jwt_header<>"."<>jwt_claim
-        {:ok, claim}       = decode_baseurl64_json(jwt_claim)
-        signature_secret = :crypto.hmac(:sha256, @secret_key, plain_text) |> Base.url_encode64()
-        case compare_time(signature_secret, jwt_signature,claim) do
-            {:error, message}  ->  {:error, message}
-            {:ok, message}     ->  {:ok, claim["sub"] }
-                        _      ->  {:error, "Unknown"}
+    def verify_account_password(account,password) do
+        id = Usermanage.check_user(account,password)
+        if is_nil(id) do
+            {:error, "Account or password not true"}
+        else
+            {:ok, id}
         end
-    end
-
-    defp compare_time(signature_secret, jwt_signature,claim) do
-        time_now = DateTime.utc_now() |> DateTime.to_unix()
-        %{
-            "aud" => aud,
-            "exp" => exp,
-            "iat" => iat,
-            "iss" => iss,
-            "nbf" => nbf,
-            "sub" => sub
-          } = claim
-          cond do 
-            (exp <= time_now)                   -> {:error, "Token is expired"}
-            (signature_secret != jwt_signature) -> {:error, "Invalid token"}
-                                        true    -> {:ok, "Valid Token"}
-          end
-    end
-
-    def inspect_token(conn,_params) do
-        accesstoken = get_token(conn)
-        case jwt_decode(accesstoken) do
-        {:ok,claim} ->  user = claim["sub"] |> Usermanage.get_user() |> struct_to_map() |> Map.drop([:password]) 
-                        json conn, user 
-                        
-                _   -> conn |> send_resp(404, "Time out")
-        end
-    end
-
-    defp get_token(conn) do
-        bearer_token = hd(get_req_header(conn,"authorization"))
-        ["Bearer", accesstoken] = String.split(bearer_token," ",parts: 2)
-        accesstoken
-    end
-
-    defp decode_baseurl64_json(baseurl64) do
-        {:ok, json}  = baseurl64 |> Base.url_decode64() 
-        {:ok, map}       = json |> JSON.decode()
-    end
+    end    
 
     def facebook_login(conn,_params) do
         redirect(conn, external: "https://www.facebook.com/v6.0/dialog/oauth?client_id=#{@app_id}&redirect_uri=#{"http://localhost:4000/api"}&state=#{"{st=state123abc,ds=123456789}"}&response_type=token")

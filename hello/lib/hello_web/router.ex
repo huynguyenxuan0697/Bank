@@ -25,29 +25,20 @@ defmodule HelloWeb.Router do
     plug HelloWeb.Plugs.Auth
   end
 
-  # scope "/", HelloWeb do
-  #   pipe_through :browser
-  #   get  "/", PageController, :index
-  #   get  "/bank",BankController,:index
-  #   get  "/bank/signup",BankController, :signup
-  #   get  "/bank/signin",BankController, :signin
-  #   get  "/bank/account/:id/:account", BankController, :account
-  # end
-
   # Other scopes may use custom stacks.
   scope "/api/bank", HelloWeb do
     pipe_through :api
-    get "/GetAllUsers", ApiBankController, :show_all
+    get "/getallusers", ApiBankController, :show_all
+    post "/signup", ApiBankController, :create
+    post "/signin", ApiBankController, :signin
     # ------- Facebook oauth ----------------------------------- 
-    get "/LoginWithFacebook", ApiBankController, :facebook_login
-    post "/FacebookHandler", ApiBankController, :facebook_login_handler
+    get  "/loginWithFacebook", ApiBankController, :facebook_login
+    post "/facebookHandler", ApiBankController, :facebook_login_handler
     # ------- Auth ---------------------------------------------
-    post "/Deposit", ApiBankController, :deposit
-    post "/Withdraw", ApiBankController, :withdraw
-    post "/Transfer", ApiBankController, :transfer
-    post "/InspectToken", ApiBankController, :inspect_token
-    post "/Signup", ApiBankController, :create
-    post "/Signin", ApiBankController, :signin
-    post "/GetUserInfo", ApiBankController, :get_user_info
+    pipe_through :auth
+    post "/deposit", ApiBankController, :deposit
+    post "/withdraw", ApiBankController, :withdraw
+    post "/transfer", ApiBankController, :transfer    
+    get  "/getuserinfo", ApiBankController, :get_user_info
   end
 end
