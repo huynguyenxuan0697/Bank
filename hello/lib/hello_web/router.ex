@@ -40,18 +40,18 @@ defmodule HelloWeb.Router do
   # Other scopes may use custom stacks.
   scope "/api/bank", HelloWeb do
     pipe_through :api
-    get  "/GetAllUsers" ,ApiBankController, :show_all
-    get "/GetUser", ApiBankController, :get_user
+    get  "/get-all-users" ,ApiBankController, :show_all
+    get "/get-user-info", ApiBankController, :get_user
     #------- Facebook oauth ----------------------------------- 
-    get "/LoginWithFacebook",  ApiBankController, :facebook_login
-    post "/FacebookHandler"  ,  ApiBankController, :facebook_login_handler  
+    get "/login-with-facebook",  ApiBankController, :facebook_login
+    post "/facebook-handler"  ,  ApiBankController, :facebook_login_handler  
     #------- Auth ---------------------------------------------
-    post "/Deposit"     ,ApiBankController, :deposit
-    post "/Withdraw"    ,ApiBankController, :withdraw
-    post "/Transfer"    ,ApiBankController, :transfer
-    post "/InspectToken",ApiBankController, :inspect_token
-    post "/Signup"      ,ApiBankController, :create
-    post "/Signin"      ,ApiBankController, :signin
+    post "/deposit"     ,ApiBankController, :deposit
+    post "/withdraw"    ,ApiBankController, :withdraw
+    post "/transfer"    ,ApiBankController, :transfer
+    post "/inspect-token",ApiBankController, :inspect_token
+    post "/signup"      ,ApiBankController, :create
+    post "/signin"      ,ApiBankController, :signin
   end
   
 end

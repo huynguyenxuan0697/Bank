@@ -19,8 +19,8 @@ defmodule HelloWeb.ApiBankController do
                 resp_error(conn,"Account can't be blank")
             String.match?(password,~r/^\s*$/) ->
                 resp_error(conn,"Password can't be blank")
-            !is_nil(password) && String.length(password) < 8 -> 
-                resp_error(conn,"Password must be at least 8 characters")
+            !is_nil(password) && String.length(password) < 6 -> 
+                resp_error(conn,"Password must be at least 6 characters")
             true ->
             password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
             if Usermanage.check_account(account) do
@@ -80,6 +80,11 @@ defmodule HelloWeb.ApiBankController do
             _ ->
                 resp_error(conn,"Unknown")
         end
+    end
+
+    def logout(conn, _params) do
+        token = get_token(conn)
+
     end
 
     def deposit(conn, %{"deposit"=> deposit}) do
@@ -270,7 +275,7 @@ defmodule HelloWeb.ApiBankController do
 
     #jwt
     @secret_key "UTELcvSwFT9t7u51SxExjsnUXjXTLFCHnUKx5trjsKjQLllCr9PwARorGZRILp56"
-    @life_time  60   # minute
+    @life_time  1   # minute
     def jwt_encode(user) do
         # -------------- header ---------------------
         header = %{

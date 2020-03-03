@@ -21,7 +21,7 @@ defmodule Hello.Usermanage do
       user
       |> cast(attrs,[:account, :password, :money])
       |> validate_required([:account, :password])
-      |> validate_length(:password, min: 8)
+      |> validate_length(:password, min: 6)
       |> unique_constraint(:account)
 
     end
