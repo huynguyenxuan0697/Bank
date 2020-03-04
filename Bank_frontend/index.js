@@ -1,29 +1,31 @@
 signinHandler = () => {
-  account = document.getElementById("signin_account").value;
-  password = document.getElementById("signin_password").value;
-  axios({
-    method: "post",
-    url: "http://localhost:4000/api/bank/signin",
-    data: {
-      account: account,
-      password: password
-    }
-  })
-    .then(resp => {
-      if (resp.data.status === "ok") {
-        localStorage.setItem("userInfo", JSON.stringify(resp.data.data));
-        homeHandler();
-      } else {
-        signinAlert = document.getElementById("signinAlert");
-        signinAlert.className = "alert alert-danger";
-        signinAlert.innerHTML = resp.data.message;
+  if (signinAccountValidate() && signinPasswordValidate()){
+    account = document.getElementById("signin_account").value;
+    password = document.getElementById("signin_password").value;
+    axios({
+      method: "post",
+      url: "http://localhost:4000/api/bank/signin",
+      data: {
+        account: account,
+        password: password
       }
     })
-    .catch(error => console.log(error));
+      .then(resp => {
+        if (resp.data.status === "ok") {
+          localStorage.setItem("userInfo", JSON.stringify(resp.data.data));
+          homeHandler();
+        } else {
+          signinAlert = document.getElementById("signinAlert");
+          signinAlert.className = "alert alert-danger";
+          signinAlert.innerHTML = resp.data.message;
+        }
+      })
+      .catch(error => console.log(error));
+  }
 };
 
 signupHandler = () => {
-  if (accountValidate() && passwordValidate()) {
+  if (signupAccountValidate() && signupPasswordValidate()) {
     account = document.getElementById("signup_account").value;
     password = document.getElementById("signup_password").value;
     axios({
@@ -36,17 +38,18 @@ signupHandler = () => {
     })
       .then(result => {
         if (result.data.status === "ok") {
+          alert('Sign up successfully')
           renderSigninHTML();
         } else {
-          accountAlert = document.getElementById("accountAlert");
-          accountAlert.className = "alert alert-danger";
-          accountAlert.innerHTML = result.data.message;
+          AccountAlert = document.getElementById("AccountAlert");
+          AccountAlert.className = "alert alert-danger";
+          AccountAlert.innerHTML = result.data.message;
         }
       })
       .catch(error => {
-        accountAlert = document.getElementById("accountAlert");
-        accountAlert.className = "alert alert-danger";
-        accountAlert.innerHTML = error.response.data;
+        AccountAlert = document.getElementById("AccountAlert");
+        AccountAlert.className = "alert alert-danger";
+        AccountAlert.innerHTML = error.response.data;
       });
   }
 };
@@ -80,6 +83,9 @@ depositHandler = () => {
       .catch(error => {
         console.log(error);
       });
+  }
+  else{
+    alert('Money must be a positive number!');
   }
 };
 
@@ -157,8 +163,24 @@ transferHandler = () => {
 };
 
 logoutHandler = () => {
-  localStorage.removeItem("userInfo");
-  renderIndexHTML();
+  axios({
+    method: "get",
+    url: "http://localhost:4000/api/bank/logout",
+    headers: {
+      authorization: `Bearer ${user.accesstoken}`
+    }
+  })
+    .then(result => {
+      if (result.data.status === 'ok'){
+        console.log(result.data.message);
+        localStorage.removeItem("userInfo");
+        renderIndexHTML();
+      }
+    })
+    .catch(error => {
+      console.log(error);
+    });
+  
 };
 
 loginWithFacebookHandler = () => {
@@ -291,30 +313,33 @@ renderSignupHTML = () => {
   document.getElementById("main").innerHTML = `
     <div class="container">
         <h1 class="text-center">Sign up</h1>
+        <div  role="alert" id="AccountAlert"></div>
         <div class="form-group">
-          <div  role="alert" id="accountAlert"></div>
           <label for="account">Account</label>
           <input
             class="form-control"
             type="text"
             name="account"
             id="signup_account"
-            onblur ="accountValidate()"            
+            onblur ="signupAccountValidate()"            
           />
+          </br>
+          <div  role="alert" id="signupAccountAlert"></div>
         </div>
         <div class="form-group">
-          <div  role="alert" id="passwordAlert"></div>
           <label for="password">Password</label>
           <input
             class="form-control"
             type="password"
             name="password"
             id="signup_password" 
-            onblur = "passwordValidate()"                       
+            onblur = "signupPasswordValidate()"                       
           />
+          </br>
+          <div  role="alert" id="signupPasswordAlert"></div>
         </div>
         <div class="text-center">
-          <button class="btn btn-success" onclick="signupHandler()" >
+          <button id="btn-signup" class="btn btn-info" onclick="signupHandler()">
             Sign up
           </button>
         </div>
@@ -328,24 +353,21 @@ renderSigninHTML = () => {
         <div id="signinAlert"></div>
         <div class="form-group">
           <label>Account</label>
-          <input
-            type="text"
-            class="form-control"
-            name="account"
-            id="signin_account"
-          />
+          <input type="text" class="form-control" name="account"
+          id="signin_account" onblur="signinAccountValidate()"/>
+          </br>
+          <div  role="alert" id="signinAccountAlert"></div>
         </div>
         <div class="form-group">
           <label>Password</label>
-          <input
-            type="password"
-            class="form-control"
-            name="password"
-            id="signin_password"
+          <input type="password" class="form-control" name="password" 
+          id="signin_password" onblur = "signinPasswordValidate()"
           />
+          </br>
+          <div  role="alert" id="signinPasswordAlert"></div>
         </div>
         <div class="text-center">
-          <button class="btn btn-success" onclick="signinHandler()">
+          <button class="btn btn-info" onclick="signinHandler()">
             Submit
           </button>
         </div>
@@ -384,45 +406,77 @@ homeHandler = () => {
     renderIndexHTML();
   }
 };
-accountValidate = () => {
+
+signupAccountValidate = () => {
   account = document.getElementById("signup_account").value;
-  accountAlert = document.getElementById("accountAlert");
+  signupAccountAlert = document.getElementById("signupAccountAlert");
   if (account === "") {
-    accountAlert.className = "alert alert-danger";
-    accountAlert.innerHTML = "Required";
+    signupAccountAlert.className = "alert alert-danger";
+    signupAccountAlert.innerHTML = "Required";
     return false;
   } else if (!account.match("^[a-zA-Z0-9_]*$")) {
     //just have character and number
-    accountAlert.className = "alert alert-danger";
-    accountAlert.innerHTML = "Account should has alphabet and number character";
+    signupAccountAlert.className = "alert alert-danger";
+    signupAccountAlert.innerHTML = "Account should has alphabet and number character";
     return false;
   } else {
-    accountAlert.className = "alert alert-success";
-    accountAlert.innerHTML = "Checked";
+    signupAccountAlert.className = "alert alert-success";
+    signupAccountAlert.innerHTML = "Checked";
     return true;
   }
 };
-passwordValidate = () => {
+
+signupPasswordValidate = () => {
   password = document.getElementById("signup_password").value;
-  pwdAlert = document.getElementById("passwordAlert");
+  signupPasswordAlert = document.getElementById("signupPasswordAlert");
   if (password === "") {
-    pwdAlert.className = "alert alert-danger";
-    pwdAlert.innerHTML = "Required";
+    signupPasswordAlert.className = "alert alert-danger";
+    signupPasswordAlert.innerHTML = "Required";
     return false;
   } else if (password.length <= 6) {
-    pwdAlert.className = "alert alert-danger";
-    pwdAlert.innerHTML = "Password must longer than 6 characters";
+    signupPasswordAlert.className = "alert alert-danger";
+    signupPasswordAlert.innerHTML = "Password must longer than 6 characters";
   } else if (
     !password.match("^(?=.*[0-9]+.*)(?=.*[a-zA-Z]+.*)[0-9a-zA-Z]{6,}$")
   ) {
     // Don't allow sepcial character
-    pwdAlert.className = "alert alert-danger";
-    pwdAlert.innerHTML =
+    signupPasswordAlert.className = "alert alert-danger";
+    signupPasswordAlert.innerHTML =
       "Password must contain at least one letter, at least one number";
     return false;
   } else {
-    pwdAlert.className = "alert alert-success";
-    pwdAlert.innerHTML = "Checked";
+    signupPasswordAlert.className = "alert alert-success";
+    signupPasswordAlert.innerHTML = "Checked";
+    return true;
+  }
+};
+
+signinAccountValidate = () => {
+  account = document.getElementById("signin_account").value;
+  signinAccountAlert = document.getElementById("signinAccountAlert");
+  if (account === ""){
+    signinAccountAlert.className = "alert alert-danger";
+    signinAccountAlert.innerHTML = "Required";
+    return false;
+  }
+  else {
+    signinAccountAlert.className = "alert alert-success";
+    signinAccountAlert.innerHTML = "Checked";
+    return true;
+  }
+};
+
+signinPasswordValidate = () => {
+  password = document.getElementById("signin_password").value;
+  signinPasswordAlert = document.getElementById("signinPasswordAlert");
+  if (password === ""){
+    signinPasswordAlert.className = "alert alert-danger";
+    signinPasswordAlert.innerHTML = "Required";
+    return false;
+  }
+  else {
+    signinPasswordAlert.className = "alert alert-success";
+    signinPasswordAlert.innerHTML = "Checked";
     return true;
   }
 };
@@ -434,10 +488,14 @@ depositValidate = () => {
   if (money.match("^s*$")) {
     depositAlert.className = "alert alert-danger";
     depositAlert.innerHTML = "Money can't be blank";
+    if (button.disabled == false)
+      button.disabled = true;
     return false;
   } else if (!money.match("^[0-9]*$")) {
     depositAlert.className = "alert alert-danger";
     depositAlert.innerHTML = "Money must be positive number";
+    if (button.disabled == false)
+      button.disabled = true;
     return false;
   } else {
     depositAlert.className = "";
@@ -446,6 +504,7 @@ depositValidate = () => {
     return true;
   }
 };
+
 withdrawValidate = () => {
   money = document.getElementById("withdraw_money").value;
   withdrawAlert = document.getElementById("withdrawAlert");
@@ -453,10 +512,14 @@ withdrawValidate = () => {
   if (money.match("^s*$")) {
     withdrawAlert.className = "alert alert-danger";
     withdrawAlert.innerHTML = "Money can't be blank";
+    if (button.disabled == false)
+      button.disabled = true;
     return false;
   } else if (!money.match("^[0-9]*$")) {
     withdrawAlert.className = "alert alert-danger";
     withdrawAlert.innerHTML = "Money must be positive number";
+    if (button.disabled == false)
+      button.disabled = true;
     return false;
   } else {
     withdrawAlert.className = "";

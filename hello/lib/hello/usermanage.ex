@@ -42,11 +42,6 @@ defmodule Hello.Usermanage do
     |> Repo.get(id)
   end
 
-  def get_user_by_id(id) do
-    Usermanage 
-    |> where([u], u.id == ^id)
-    |> Repo.one()
-  end
 
   def insert_user(account, password) do
     params = %{account: account, password: password}
