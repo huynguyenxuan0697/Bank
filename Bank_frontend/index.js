@@ -185,7 +185,7 @@ logoutHandler = () => {
 
 loginWithFacebookHandler = () => {
   location.href =
-    "https://www.facebook.com/v6.0/dialog/oauth?client_id=197695828014122&redirect_uri=http://localhost:5501/index.html&state=st=state123abc,ds=123456789&response_type=token&auth_type=rerequest&scope=email";
+    "https://www.facebook.com/v6.0/dialog/oauth?client_id=197695828014122&redirect_uri=http://localhost:8080&state=st=state123abc,ds=123456789&response_type=token&auth_type=rerequest&scope=email";
 };
 
 xoa_dau = str => {
@@ -497,6 +497,12 @@ depositValidate = () => {
     if (button.disabled == false)
       button.disabled = true;
     return false;
+  } else if (money.length > 10) {
+    depositAlert.className = "alert alert-danger";
+    depositAlert.innerHTML = "Length of number must be less than 10";
+    if (button.disabled == false)
+      button.disabled = true;
+    return false;
   } else {
     depositAlert.className = "";
     depositAlert.innerHTML = "";
@@ -518,6 +524,12 @@ withdrawValidate = () => {
   } else if (!money.match("^[0-9]*$")) {
     withdrawAlert.className = "alert alert-danger";
     withdrawAlert.innerHTML = "Money must be positive number";
+    if (button.disabled == false)
+      button.disabled = true;
+    return false;
+  } else if (money.length > 10) {
+    withdrawAlert.className = "alert alert-danger";
+    withdrawAlert.innerHTML = "Length of number must be less than 10";
     if (button.disabled == false)
       button.disabled = true;
     return false;
@@ -579,6 +591,10 @@ transferMoneyValidate = () => {
     transferMoneyAlert.className = "alert alert-danger";
     transferMoneyAlert.innerHTML = "Money must be positive number";
     return false;
+  } else if (money.length > 10) {
+    transferMoneyAlert.className = "alert alert-danger";
+    transferMoneyAlert.innerHTML = "Length of number must be less than 10";
+    return false;
   } else {
     transferMoneyAlert.className = "";
     transferMoneyAlert.innerHTML = "";
@@ -599,8 +615,9 @@ window.onload = () => {
       }
     })
       .then(resp => {
-        resp.data.data.account = xoa_dau(resp.data.data.account);
+        //resp.data.data.account = xoa_dau(resp.data.data.account);
         localStorage.setItem("userInfo", JSON.stringify(resp.data.data));
+        location.replace("http://localhost:8080");
         homeHandler();
       })
       .catch(error => console.log(error.response));
