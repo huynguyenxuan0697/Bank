@@ -3,6 +3,7 @@ defmodule HelloWeb.Plugs.Auth do
   import Phoenix.Controller
   alias HelloWeb.Router.Helpers
   alias HelloWeb.ApiBankController
+  alias Hello.Token
 
   @secret_key "UTELcvSwFT9t7u51SxExjsnUXjXTLFCHnUKx5trjsKjQLllCr9PwARorGZRILp56"
   def init(_params) do
@@ -32,11 +33,17 @@ defmodule HelloWeb.Plugs.Auth do
     [jwt_header,jwt_claim,jwt_signature]=String.split(token,".", parts: 3) 
     plain_text         = jwt_header<>"."<>jwt_claim
     {:ok, claim}       = decode_baseurl64_json(jwt_claim)
-    signature_secret = :crypto.hmac(:sha256, @secret_key, plain_text) |> Base.url_encode64()
-    case compare_time(signature_secret, jwt_signature,claim) do
-        {:error, message}  ->  {:error, message}
-        {:ok, message}     ->  {:ok, claim["sub"] }
-                    _      ->  {:error, "Unknown"}
+    # get secret
+    secret = Token.get_secret(claim["sub"])
+    if secret !== nil do
+      signature_secret = :crypto.hmac(:sha256, secret, plain_text) |> Base.url_encode64()
+      case compare_time(signature_secret, jwt_signature,claim) do
+          {:error, message}  ->  {:error, message}
+          {:ok, message}     ->  {:ok, claim["sub"] }
+                      _      ->  {:error, "Unknown"}
+      end
+    else
+          {:error, "You have been logged out"}
     end
   end
 

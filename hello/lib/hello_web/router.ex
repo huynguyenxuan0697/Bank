@@ -40,5 +40,6 @@ defmodule HelloWeb.Router do
     post "/withdraw", ApiBankController, :withdraw
     post "/transfer", ApiBankController, :transfer    
     get  "/getuserinfo", ApiBankController, :get_user_info
+    get  "/logout", ApiBankController, :logout
   end
 end

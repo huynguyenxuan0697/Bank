@@ -1,7 +1,7 @@
 defmodule HelloWeb.ApiBankController do
     use HelloWeb,:controller
     alias HelloWeb.Router.Helpers
-    alias Hello.{Repo,Usermanage,Guardian}
+    alias Hello.{Repo,Usermanage,Token,Guardian}
     alias Plug.Crypto.MessageVerifier
     import Ecto.Query
 
@@ -13,7 +13,6 @@ defmodule HelloWeb.ApiBankController do
     #Password secret
     @psw_secret "sfowieru091203921idsadfijljxzvcz00zaalkNDSADLKS09800DZMXCMkmsfasdfas123131dffd332d+_="
     #jwt
-    @secret_key "UTELcvSwFT9t7u51SxExjsnUXjXTLFCHnUKx5trjsKjQLllCr9PwARorGZRILp56"
     @life_time  60   # minute
 
     
@@ -181,9 +180,8 @@ defmodule HelloWeb.ApiBankController do
     # Sigin _____________________________________________________________________
     def signin(conn,%{"account"=>account,"password"=>password})  do
         password = :crypto.hash(:sha256, password<>@psw_secret) |> Base.url_encode64()
-        case token_sign_in(account,password) do
-            #  {:ok, token, claims} -> json conn, %{accesstoken: token}
-                    {:ok, token, user_info}  ->  
+        case token_sign_in(account,password) do            
+                    {:ok, token, user_info}  ->                         
                         data = %{accesstoken: token, account: account}
                         resp_ok(conn, data)
                     _ ->  
@@ -220,13 +218,37 @@ defmodule HelloWeb.ApiBankController do
         }
         {:ok, json_claim} = JSON.encode(claim)
         jwt_claim = Base.url_encode64(json_claim)
-        # --------------- signature -----------------
+        #-----------------secret-------------------------
+        secret = get_secret(user.id)
+        # --------------- signature ---------------------
         signature = jwt_header<>"."<>jwt_claim
-        jwt_signature = :crypto.hmac(:sha256, @secret_key, signature) |> Base.url_encode64()
+        jwt_signature = :crypto.hmac(:sha256, secret, signature) |> Base.url_encode64()
+        #---------------- jwt token ---------------------
         token = jwt_header<>"."<>jwt_claim<>"."<>jwt_signature
         token
-    end    
-    #_____________________________________________________________________________
+    end
+    
+    def get_secret(id) do
+        secret = Token.get_secret(id)
+        if  is_nil(secret) do
+        secret = :crypto.strong_rand_bytes(60) |> Base.url_encode64
+        Token.insert_secret(id, secret)
+        secret 
+        else 
+        secret
+        end
+    end
+    # Logout _________________________________________________________________________
+    def logout(conn, _params) do
+        id = conn.assigns[:id]
+        Token.delete_secret(id)
+        resp =%{
+            status: "ok",
+            message: "Log out successfully"
+        }
+        json conn,resp
+    end 
+    #________________________________________________________________________________
     defp struct_to_map(struct) do
         struct
         |> Map.from_struct()
