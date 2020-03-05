@@ -17,7 +17,7 @@ signinHandler = () => {
         } else {
           signinAlert = document.getElementById("signinAlert");
           signinAlert.className = "alert alert-danger";
-          signinAlert.innerHTML = resp.data.message;
+          signinAlert.innerHTML = resp.data.error_list;
         }
       })
       .catch(error => console.log(error));
@@ -43,13 +43,13 @@ signupHandler = () => {
         } else {
           AccountAlert = document.getElementById("AccountAlert");
           AccountAlert.className = "alert alert-danger";
-          AccountAlert.innerHTML = result.data.message;
+          AccountAlert.innerHTML = result.data.error_list;
         }
       })
       .catch(error => {
         AccountAlert = document.getElementById("AccountAlert");
         AccountAlert.className = "alert alert-danger";
-        AccountAlert.innerHTML = error.response.data;
+        AccountAlert.innerHTML = error.response.error_list;
       });
   }
 };
@@ -72,20 +72,19 @@ depositHandler = () => {
       .then(resp => {
         if (resp.data.status === "ok") {
           document.getElementById("user-money").innerHTML = 'Money in account: ' + resp.data.data.money;
+          document.getElementById("btn-deposit-close").click();
         } else {
-          alert(resp.data.message);
-          if (resp.data.message === 'Unauthorized'){
+          //console.log(resp.data.message);
+          if (resp.data.message === "Invalid token" || resp.data.message === "You have been logged out" || resp.data.message === "Token is expired"){
             localStorage.removeItem("userInfo");
             renderIndexHTML();
+            location.reload();
           }
         }
       })
       .catch(error => {
         console.log(error);
       });
-  }
-  else{
-    alert('Money must be a positive number!');
   }
 };
 
@@ -107,11 +106,12 @@ withdrawHandler = () => {
       .then(resp => {
         if (resp.data.status === "ok") {
           document.getElementById("user-money").innerHTML = 'Money in account: ' + resp.data.data.money;
+          document.getElementById("btn-withdraw-close").click();
         } else {
-          alert(resp.data.message);
-          if (resp.data.message === 'Unauthorized'){
+          if (resp.data.message === "Invalid token" || resp.data.message === "You have been logged out" || resp.data.message === "Token is expired"){
             localStorage.removeItem("userInfo");
             renderIndexHTML();
+            location.reload();
           }
         }
       })
@@ -126,8 +126,11 @@ transferHandler = () => {
   money = document.getElementById("transfer_money").value;
   receiverName = document.getElementById("receiver_name").value;
   receiverId = document.getElementById("receiver_id").value;
-  if (transferIdValidate() && transferNameValidate() && transferMoneyValidate())
-  {
+
+  /*transferIdAlert = document.getElementById("transferIdAlert");
+  transferNameAlert = document.getElementById("transferNameAlert");
+  transferMoneyAlert = document.getElementById("transferMoneyAlert");*/
+  if (transferIdValidate() && transferIdValidate() && transferIdValidate()){
     axios({
       method: "post",
       url: "http://localhost:4000/api/bank/transfer",
@@ -146,19 +149,16 @@ transferHandler = () => {
           document.getElementById("user-money").innerHTML = 'Money in account: ' + resp.data.data.money;
           document.getElementById("transferClose").click();
         } else {
-          alert(resp.data.message);
-          if (resp.data.message === 'Unauthorized'){
+          if (resp.data.message === "Invalid token" || resp.data.message === "You have been logged out" || resp.data.message === "Token is expired"){
             localStorage.removeItem("userInfo");
             renderIndexHTML();
+            location.reload();
           }
         }
       })
       .catch(error => {
         console.log(error);
-      });
-  }
-  else{
-    alert('Info is not valid');
+    });
   }
 };
 
@@ -234,13 +234,14 @@ renderMainHTML = (money) => {
                   </button>
                 </div>
                 <div class="modal-body">  
-                      <div id ="depositAlert"></div>      
+                      <div id ="depositAlert"></div>    
                       <label for="money">Money</label>
-                      <input class="form-control" name="deposit" id="deposit_money" onblur="depositValidate()" ></input>    
+                      <input class="form-control" name="deposit" id="deposit_money" type="number" 
+                      onblur="depositValidate()"></input>
                 </div>
                 <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                  <button  class="btn btn-primary" onclick = "depositHandler()"  id="depositSubmit" data-dismiss="modal" disabled>Deposit</button>
+                  <button id="btn-deposit-close" type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                  <button  class="btn btn-primary" onclick = "depositHandler()"  id="depositSubmit" disabled>Deposit</button>
                 </div>   
               </div>
             </div>
@@ -259,11 +260,12 @@ renderMainHTML = (money) => {
                 <div class="modal-body">
                       <div id= "withdrawAlert"></div>
                       <label>Money</label>
-                      <input class="form-control" name="withdraw" id="withdraw_money" onblur="withdrawValidate()"></input>        
+                      <input class="form-control" name="withdraw" id="withdraw_money" type="number" 
+                      onblur="withdrawValidate()"></input>        
                 </div>
                 <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                  <button  class="btn btn-primary" onclick="withdrawHandler()" data-dismiss="modal" id="withdrawSubmit" disabled>Withdraw</button>
+                  <button id="btn-withdraw-close" type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                  <button  class="btn btn-primary" onclick="withdrawHandler()" id="withdrawSubmit">Withdraw</button>
                 </div>  
               </div>
             </div>
@@ -282,7 +284,7 @@ renderMainHTML = (money) => {
                 <div class="modal-body">
                       <div id= "transferIdAlert"></div>
                       <label>Receiver's id</label>
-                      <input class="form-control" id="receiver_id" onblur="transferIdValidate()"></input>
+                      <input class="form-control" id="receiver_id" onblur="transferIdValidate()" type="number"></input>
                       </br>
                       <div id= "transferNameAlert"></div>
                       <label>Reveiver's name</label>
@@ -290,7 +292,7 @@ renderMainHTML = (money) => {
                       </br>
                       <div id= "transferMoneyAlert"></div>
                       <label for="money">Money</label>
-                      <input class="form-control"  id="transfer_money" onblur="transferMoneyValidate()"></input>        
+                      <input class="form-control"  id="transfer_money" onblur="transferMoneyValidate()" type="number"></input>        
                 </div>
                 <div class="modal-footer">
                   <button id="transferClose" type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -321,7 +323,7 @@ renderSignupHTML = () => {
             type="text"
             name="account"
             id="signup_account"
-            onblur ="signupAccountValidate()"            
+            onblur="signupAccountValidate()"       
           />
           </br>
           <div  role="alert" id="signupAccountAlert"></div>
@@ -333,7 +335,7 @@ renderSignupHTML = () => {
             type="password"
             name="password"
             id="signup_password" 
-            onblur = "signupPasswordValidate()"                       
+            onblur="signupPasswordValidate()"
           />
           </br>
           <div  role="alert" id="signupPasswordAlert"></div>
@@ -361,8 +363,7 @@ renderSigninHTML = () => {
         <div class="form-group">
           <label>Password</label>
           <input type="password" class="form-control" name="password" 
-          id="signin_password" onblur = "signinPasswordValidate()"
-          />
+          id="signin_password" onblur="signinPasswordValidate()"/>
           </br>
           <div  role="alert" id="signinPasswordAlert"></div>
         </div>
@@ -393,9 +394,10 @@ homeHandler = () => {
           renderUserNameHTML(account);
         }
         else{
-          if (result.data.message === 'Unauthorized'){
+          if (result.data.message === "Invalid token" || result.data.message === "You have been logged out" || result.data.message === "Token is expired"){
             localStorage.removeItem("userInfo");
             renderIndexHTML();
+            location.reload();
           }
         }
       })
@@ -412,7 +414,7 @@ signupAccountValidate = () => {
   signupAccountAlert = document.getElementById("signupAccountAlert");
   if (account === "") {
     signupAccountAlert.className = "alert alert-danger";
-    signupAccountAlert.innerHTML = "Required";
+    signupAccountAlert.innerHTML = "Account name is required";
     return false;
   } else if (!account.match("^[a-zA-Z0-9_]*$")) {
     //just have character and number
@@ -421,7 +423,7 @@ signupAccountValidate = () => {
     return false;
   } else {
     signupAccountAlert.className = "alert alert-success";
-    signupAccountAlert.innerHTML = "Checked";
+    signupAccountAlert.innerHTML = "Accepted";
     return true;
   }
 };
@@ -431,22 +433,19 @@ signupPasswordValidate = () => {
   signupPasswordAlert = document.getElementById("signupPasswordAlert");
   if (password === "") {
     signupPasswordAlert.className = "alert alert-danger";
-    signupPasswordAlert.innerHTML = "Required";
+    signupPasswordAlert.innerHTML = "Password is required";
     return false;
   } else if (password.length <= 6) {
     signupPasswordAlert.className = "alert alert-danger";
     signupPasswordAlert.innerHTML = "Password must longer than 6 characters";
-  } else if (
-    !password.match("^(?=.*[0-9]+.*)(?=.*[a-zA-Z]+.*)[0-9a-zA-Z]{6,}$")
-  ) {
+  } else if (!password.match("^(?=.*[0-9]+.*)(?=.*[a-zA-Z]+.*)[0-9a-zA-Z]{6,}$")) {
     // Don't allow sepcial character
     signupPasswordAlert.className = "alert alert-danger";
-    signupPasswordAlert.innerHTML =
-      "Password must contain at least one letter, at least one number";
+    signupPasswordAlert.innerHTML = "Password must contain at least one letter, at least one number";
     return false;
   } else {
     signupPasswordAlert.className = "alert alert-success";
-    signupPasswordAlert.innerHTML = "Checked";
+    signupPasswordAlert.innerHTML = "Accepted";
     return true;
   }
 };
@@ -456,12 +455,12 @@ signinAccountValidate = () => {
   signinAccountAlert = document.getElementById("signinAccountAlert");
   if (account === ""){
     signinAccountAlert.className = "alert alert-danger";
-    signinAccountAlert.innerHTML = "Required";
+    signinAccountAlert.innerHTML = "Account name is Required";
     return false;
   }
   else {
     signinAccountAlert.className = "alert alert-success";
-    signinAccountAlert.innerHTML = "Checked";
+    signinAccountAlert.innerHTML = "Accepted";
     return true;
   }
 };
@@ -471,41 +470,40 @@ signinPasswordValidate = () => {
   signinPasswordAlert = document.getElementById("signinPasswordAlert");
   if (password === ""){
     signinPasswordAlert.className = "alert alert-danger";
-    signinPasswordAlert.innerHTML = "Required";
+    signinPasswordAlert.innerHTML = "Password is Required";
     return false;
   }
   else {
     signinPasswordAlert.className = "alert alert-success";
-    signinPasswordAlert.innerHTML = "Checked";
+    signinPasswordAlert.innerHTML = "Accepted";
     return true;
   }
 };
 
-depositValidate = () => {
+depositValidate = (e) => {
   money = document.getElementById("deposit_money").value;
   depositAlert = document.getElementById("depositAlert");
   button = document.getElementById("depositSubmit");
-  if (money.match("^s*$")) {
+  if (!money.match("(^[0-9]*$)")) {
     depositAlert.className = "alert alert-danger";
-    depositAlert.innerHTML = "Money can't be blank";
-    if (button.disabled == false)
-      button.disabled = true;
-    return false;
-  } else if (!money.match("^[0-9]*$")) {
+    depositAlert.innerHTML = "Money must be positive integer";
+    button.disabled = true;
+    return false;  
+  } else if (money.match("^s*$")) {
     depositAlert.className = "alert alert-danger";
-    depositAlert.innerHTML = "Money must be positive number";
-    if (button.disabled == false)
-      button.disabled = true;
+    depositAlert.innerHTML = "Money must be positive integer";
+    button.disabled = true;
     return false;
   } else if (money.length > 10) {
     depositAlert.className = "alert alert-danger";
     depositAlert.innerHTML = "Length of number must be less than 10";
-    if (button.disabled == false)
-      button.disabled = true;
+    button.disabled = true;
     return false;
   } else {
     depositAlert.className = "";
     depositAlert.innerHTML = "";
+    depositAlert.className = "alert alert-success";
+    depositAlert.innerHTML = "Accepted";
     button.disabled = false;
     return true;
   }
@@ -517,26 +515,19 @@ withdrawValidate = () => {
   button = document.getElementById("withdrawSubmit");
   if (money.match("^s*$")) {
     withdrawAlert.className = "alert alert-danger";
-    withdrawAlert.innerHTML = "Money can't be blank";
-    if (button.disabled == false)
-      button.disabled = true;
+    withdrawAlert.innerHTML = "Money must be positive number";
     return false;
   } else if (!money.match("^[0-9]*$")) {
     withdrawAlert.className = "alert alert-danger";
     withdrawAlert.innerHTML = "Money must be positive number";
-    if (button.disabled == false)
-      button.disabled = true;
     return false;
   } else if (money.length > 10) {
     withdrawAlert.className = "alert alert-danger";
     withdrawAlert.innerHTML = "Length of number must be less than 10";
-    if (button.disabled == false)
-      button.disabled = true;
     return false;
   } else {
     withdrawAlert.className = "";
     withdrawAlert.innerHTML = "";
-    button.disabled = false;
     return true;
   }
 };
@@ -547,11 +538,11 @@ transferIdValidate = () => {
 
   if (receiver_id.match("^s*$")) {
     transferIdAlert.className = "alert alert-danger";
-    transferIdAlert.innerHTML = "Id can't be blank";
+    transferIdAlert.innerHTML = "Id must be positive integer";
     return false;
   } else if (!receiver_id.match("^[0-9]*$")) {
     transferIdAlert.className = "alert alert-danger";
-    transferIdAlert.innerHTML = "Id must be positive number";
+    transferIdAlert.innerHTML = "Id must be positive integer";
     return false;
   } else {
     transferIdAlert.className = "";
@@ -585,11 +576,11 @@ transferMoneyValidate = () => {
   button = document.getElementById("transferSubmit");
   if (money.match("^s*$")) {
     transferMoneyAlert.className = "alert alert-danger";
-    transferMoneyAlert.innerHTML = "Money can't be blank";
+    transferMoneyAlert.innerHTML = "Money must be positive integer";
     return false;
   } else if (!money.match("^[0-9]*$")) {
     transferMoneyAlert.className = "alert alert-danger";
-    transferMoneyAlert.innerHTML = "Money must be positive number";
+    transferMoneyAlert.innerHTML = "Money must be positive integer";
     return false;
   } else if (money.length > 10) {
     transferMoneyAlert.className = "alert alert-danger";
