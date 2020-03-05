@@ -3,6 +3,7 @@ defmodule HelloWeb.ApiBankController do
   alias HelloWeb.Router.Helpers
   alias Hello.{Repo, Usermanage, Token, Guardian}
   alias Plug.Crypto.MessageVerifier
+  alias HelloWeb.Response
   import Ecto.Query
 
   # Oauth
@@ -27,13 +28,13 @@ defmodule HelloWeb.ApiBankController do
   def create(conn, %{"account" => account, "password" => password}) do
     cond do
       String.match?(password, ~r/^\s*$/) ->
-        resp_error(conn, "Password can't be blank")
+        Response.error(conn, "Password can't be blank")
 
       !is_nil(password) && String.length(password) < 7 ->
-        resp_error(conn, "Password must be longer than 6 characters")
+        Response.error(conn, "Password must be longer than 6 characters")
 
       !is_nil(Usermanage.check_account(account)) ->
-        resp_error(conn, "Duplicate account")
+        Response.error(conn, "Duplicate account")
 
       true ->
         password = :crypto.hash(:sha256, password <> @psw_secret) |> Base.url_encode64()
@@ -48,10 +49,10 @@ defmodule HelloWeb.ApiBankController do
 
           {:error, changeset} ->
             message = error_parse(changeset.errors)
-            resp_error(conn, message)
+            Response.error(conn, message)
 
           _ ->
-            resp_error(conn, "Unknown")
+            Response.error(conn, "Unknown")
         end
     end
   end
@@ -83,24 +84,6 @@ defmodule HelloWeb.ApiBankController do
     end
   end
 
-  defp resp_error(conn, error_list) do
-    resp = %{
-      status: "error",
-      error_list: error_list
-    }
-
-    conn |> json(resp)
-  end
-
-  defp resp_ok(conn, data) do
-    resp = %{
-      status: "ok",
-      data: data
-    }
-
-    conn |> json(resp)
-  end
-
   # Deposit , withdraw, transfer ________________________________________________
   def deposit(conn, %{"deposit" => deposit}) do
     id = conn.assigns[:id]
@@ -110,39 +93,41 @@ defmodule HelloWeb.ApiBankController do
       {:ok, money} <- add_money(id, money),
       {:ok, struct} <- Usermanage.update_money(id, money)
     ) do
-      resp_ok(conn, %{money: money})
+      Response.ok(conn, %{money: money})
     else
       {:money_error, message} ->
-        resp_error(conn, add_message([],message,400))
+        Response.error(conn, Response.add_message([], message, 400))
 
       {:error, changeset} ->
         message = money_error_parse(changeset.errors)
-        resp_error(conn, add_message([],message,400))
-
+        Response.error(conn, Response.add_message([], message, 400))
+      {:handle_money_error,message} ->
+        Response.error(conn, Response.add_message([], message, 400))
       _ ->
-        resp_error(conn, add_message([],"Unknown",400))
+        Response.error(conn, Response.add_message([], "Unknown", 400))
     end
   end
 
   def withdraw(conn, %{"withdraw" => withdraw}) do
     id = conn.assigns[:id]
-
+    
     with(
       {:ok, money} <- validate_money(withdraw),
       {:ok, money} <- sub_money(id, withdraw),
       {:ok, struct} <- Usermanage.update_money(id, money)
     ) do
-      resp_ok(conn, %{money: money})
+      Response.ok(conn, %{money: money})
     else
       {:money_error, message} ->
-        resp_error(conn, add_message([],message,400))
+        Response.error(conn, Response.add_message([], message, 400))
 
       {:error, changeset} ->
         message = money_error_parse(changeset.errors)
-        resp_error(conn, add_message([],message,400))
-
+        Response.error(conn, Response.add_message([], message, 400))
+      {:handle_money_error,message} ->
+        Response.error(conn, Response.add_message([], message, 400))
       _ ->
-        resp_error(conn, add_message([],"Unknown",400))
+        Response.error(conn, Response.add_message([], "Unknown", 400))
     end
   end
 
@@ -154,18 +139,18 @@ defmodule HelloWeb.ApiBankController do
     id = conn.assigns[:id]
     error_list = []
     # check receiverid
-    error_list = check_receiverid(error_list,receiverid)
+    error_list = check_receiverid(error_list, receiverid)
     # check receiver name
-    error_list = check_receivername(error_list,receivername)
+    error_list = check_receivername(error_list, receivername)
     # check receiver id and name 
-    error_list = check_receiver_id_name(error_list,receiverid,receivername)
+    error_list = check_receiver_id_name(error_list, receiverid, receivername)
     # check money
-    error_list = check_money(error_list,money)
-    
+    error_list = check_money(error_list, money)
+
     if error_list !== [] do
-    resp_error(conn,error_list)
+      Response.error(conn, error_list)
     end
-  
+
     # check schema, sub money        
     with(
       {:ok, target_money} <- add_money(receiverid, money),
@@ -173,60 +158,68 @@ defmodule HelloWeb.ApiBankController do
       {:ok, source_struct} <- Usermanage.update_money(id, source_money),
       {:ok, target_struct} <- Usermanage.update_money(receiverid, target_money)
     ) do
-      resp_ok(conn, %{money: source_money})
+      Response.ok(conn, %{money: source_money})
     else
-      {:sub_money_error, message} ->
-        error_list = add_message(error_list, message, 400)
-        resp_error(conn, error_list)
+      {:handle_money_error, message} ->
+        error_list = Response.add_message(error_list, message, 400)
+        Response.error(conn, error_list)
+
       {:error, changeset} ->
         message = money_error_parse(changeset.errors)
-        error_list = add_message(error_list, message, 400)
-        resp_error(conn,error_list)
+        error_list = Response.add_message(error_list, message, 400)
+        Response.error(conn, error_list)
+
       _ ->
-        resp_error(conn, "Unknown")
+        Response.error(conn, "Unknown")
     end
   end
 
-  defp check_receiverid(error_list,receiverid) do
+  defp check_receiverid(error_list, receiverid) do
     cond do
       String.match?(receiverid, ~r/^\s*$/) ->
-        error_list = add_message(error_list, "Receiver's id can't be blank", 400)
-      !String.match?(receiverid, ~r/^[0-9]*$/) ->
-        error_list = add_message(error_list, "Receiver's id must be positive number", 400)
-      true ->
-        error_list
-    end
-  end
-  
-  defp check_receivername(error_list,receivername)do
-    cond do
-      String.match?(receivername, ~r/^\s*$/) ->
-        error_list = add_message(error_list, "Receiver's name can't be blank", 400)
+        error_list = Response.add_message(error_list, "Receiver's id can't be blank", 400)
+
+      !(String.match?(receiverid, ~r/^[0-9]*$/)) ->
+        error_list = Response.add_message(error_list, "Receiver's id must be positive number", 400)
+
       true ->
         error_list
     end
   end
 
-  defp check_receiver_id_name(error_list,receiverid,receivername)do
-    if  !String.match?(receiverid, ~r/^\s*$/) && !String.match?(receivername, ~r/^\s*$/) do
-      cond do      
-        (elem(Integer.parse(receiverid), 0) !== Usermanage.show_id(receivername)) ->
-          error_list = add_message(error_list, "Account and id are not matched", 400)
-        true -> 
-            error_list
+  defp check_receivername(error_list, receivername) do
+    cond do
+      String.match?(receivername, ~r/^\s*$/) ->
+        error_list = Response.add_message(error_list, "Receiver's name can't be blank", 400)
+      true ->
+        error_list
+    end
+  end
+
+  defp check_receiver_id_name(error_list, receiverid, receivername) do
+    if !String.match?(receiverid, ~r/^\s*$/) 
+    && !String.match?(receivername, ~r/^\s*$/) 
+    && String.match?(receiverid, ~r/^[0-9]*$/)
+    do
+      cond do
+        String.to_integer(receiverid) !== Usermanage.show_id(receivername) ->
+          error_list = Response.add_message(error_list, "Account and id are not matched", 400)
+
+        true ->
+          error_list
       end
-    else 
+    else
       error_list
     end
   end
 
-  defp check_money(error_list,money) do
+  defp check_money(error_list, money) do
     cond do
       String.match?(money, ~r/^\s*$/) ->
-        error_list = add_message(error_list, "Money can't be blank", 400)
+        error_list = Response.add_message(error_list, "Money can't be blank", 400)
 
       !String.match?(money, ~r/^[0-9]*$/) ->
-        error_list = add_message(error_list, "Money must be positive number", 400)
+        error_list = Response.add_message(error_list, "Money must be positive number", 400)
 
       true ->
         error_list
@@ -242,28 +235,38 @@ defmodule HelloWeb.ApiBankController do
   end
 
   defp add_money(id, deposit) do
+    deposit = String.to_integer(deposit)
+    if deposit  > 50000000 do
+      {:handle_money_error,"Can't add/transfer more than 50 milion a time"}
+    else
     money = Usermanage.show_money(id)
-    money = money + elem(Integer.parse(deposit), 0)
+    money = money + deposit
     {:ok, money}
+    end
   end
 
   defp sub_money(id, withdraw) do
     money = Usermanage.show_money(id)
-    withdraw = elem(Integer.parse(withdraw), 0)
+    withdraw = String.to_integer(withdraw)
 
-    if money >= withdraw do
+    cond do 
+      withdraw > 50000000->
+        {:handle_money_error,"Can't withdraw more than 50 mil a time"}
+      withdraw > money ->
+      {:handle_money_error, "Money in your account is not enough"}
+      true ->
       money = money - withdraw
       {:ok, money}
-    else
-      {:sub_money_error, "Money in your account is not enough"}
+    
     end
   end
+
   # _____________________________________________________________________________
 
   def get_user_info(conn, _params) do
     id = conn.assigns[:id]
     user = Usermanage.get_user(id) |> struct_to_map() |> Map.drop([:password])
-    resp_ok(conn, user)
+    Response.ok(conn, user)
   end
 
   # Sigin _____________________________________________________________________
@@ -273,10 +276,10 @@ defmodule HelloWeb.ApiBankController do
     case token_sign_in(account, password) do
       {:ok, token, user_info} ->
         data = %{accesstoken: token, account: account}
-        resp_ok(conn, data)
+        Response.ok(conn, data)
 
       _ ->
-        resp_error(conn, "Account or password is not true")
+        Response.error(conn, "Account or password is not true")
     end
   end
 
@@ -448,21 +451,5 @@ defmodule HelloWeb.ApiBankController do
     json_resp
   end
 
-  def add_message(error_list, message, error_code) do
-    message = %{
-      message: message,
-      error_code: error_code
-    }
-
-    [message | error_list]
-  end
+  
 end
-
-# error list rep model
-# resp = %{
-#     status: "error",
-#     error_list: [
-#         %{message: "hello ajinomoto", errorCode: "999"},
-#         %{message: "nono nana",       errorCode: "888"}
-#     ]
-#   }

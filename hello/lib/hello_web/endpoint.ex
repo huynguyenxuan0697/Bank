@@ -45,5 +45,6 @@ defmodule HelloWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+  plug HelloWeb.Plugs.CheckMethod
   plug HelloWeb.Router
 end

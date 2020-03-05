@@ -11,10 +11,7 @@ defmodule HelloWeb.Router do
     plug :protect_from_forgery
     # put headers that improve browser security
     plug :put_secure_browser_headers
-    # plug :"Controller.test"
-    # plug LearningPlug2, %{}
-    # plug :test_assign
-    # plug HelloWeb.Plugs.SetCurrentUser
+    
   end
 
   pipeline :api do
@@ -25,6 +22,7 @@ defmodule HelloWeb.Router do
     plug HelloWeb.Plugs.Auth
   end
 
+  
   # Other scopes may use custom stacks.
   scope "/api/bank", HelloWeb do
     pipe_through :api
@@ -41,5 +39,15 @@ defmodule HelloWeb.Router do
     post "/transfer", ApiBankController, :transfer    
     get  "/getuserinfo", ApiBankController, :get_user_info
     get  "/logout", ApiBankController, :logout
+    
   end
+
+  scope "/", HelloWeb do
+    pipe_through :api
+    get "/*path", DefaultController, :default
+    put "/*path", DefaultController, :default
+    post "/*path", DefaultController, :default
+    delete "/*path", DefaultController, :default
+  end
+  
 end

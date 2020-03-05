@@ -49,9 +49,9 @@ defmodule HelloWeb.BankController do
   #   HistoryTransaction.create_datetime(
   #     %{
   #       user_id: id,
-  #       datetime: DateTime.utc_now,
+  #       datetime: DateTime.utc_now |> DateTime.add(7*3600,:second),
   #       action: submit,
-  #       money: elem(Integer.parse(deposit),0)
+  #       money: String.to_integer(deposit)
   #       })
   #   money = money + elem(Integer.parse(deposit),0)
   #   Usermanage.update_money(id,money)

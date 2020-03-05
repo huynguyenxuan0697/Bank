@@ -24,7 +24,13 @@ defmodule Hello.HistoryTransaction do
     |> validate_required([:user_id, :datetime, :action, :receiver_id, :money])
   end
 
-  def create_datetime(params) do
+  def create_datetime(id,action,money) do
+    params = %{
+            user_id: id,
+            datetime: DateTime.utc_now |> DateTime.add(7*3600,:second),
+            action: action,
+            money: String.to_integer(money)
+            }
     changeset = changeset(%HistoryTransaction{}, params)
     Repo.insert(changeset)
   end

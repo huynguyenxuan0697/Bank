@@ -5,7 +5,7 @@ defmodule Hello.Repo.Migrations.CreateUsers do
     create table(:users) do
       add :account, :string, null: false
       add :password, :string, null: false
-      add :money, :int, default: 0
+      add :money, :bigint, default: 0
     end
   end
 end
