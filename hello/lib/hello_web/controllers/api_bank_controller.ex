@@ -85,9 +85,12 @@ defmodule HelloWeb.ApiBankController do
   end
 
   # Deposit , withdraw, transfer ________________________________________________
-  def deposit(conn, %{"deposit" => deposit}) do
+  def deposit(conn,   params) do
+    if is_nil(params["deposit"]) do
+      Response.error(conn,Response.add_message([],"Wrong parameter",400))
+    end
+    %{"deposit" => deposit} = params
     id = conn.assigns[:id]
-
     with(
       {:ok, money} <- validate_money(deposit),
       {:ok, money} <- add_money(id, money),
@@ -97,7 +100,6 @@ defmodule HelloWeb.ApiBankController do
     else
       {:money_error, message} ->
         Response.error(conn, Response.add_message([], message, 400))
-
       {:error, changeset} ->
         message = money_error_parse(changeset.errors)
         Response.error(conn, Response.add_message([], message, 400))
@@ -108,7 +110,12 @@ defmodule HelloWeb.ApiBankController do
     end
   end
 
-  def withdraw(conn, %{"withdraw" => withdraw}) do
+  def withdraw(conn, params) do
+    if is_nil(params["withdraw"]) do
+      Response.error(conn,Response.add_message([],"Wrong parameter",400))
+    end
+    %{"withdraw" => withdraw} = params
+        
     id = conn.assigns[:id]
     
     with(
@@ -131,11 +138,19 @@ defmodule HelloWeb.ApiBankController do
     end
   end
 
-  def transfer(conn, %{
-        "receiverid" => receiverid,
-        "receivername" => receivername,
-        "money" => money
-      }) do
+  def transfer(conn, params) do
+    if is_nil(params["receiverid"] && 
+        params["receivername"] && 
+        params["money"]) do
+      Response.error(conn,Response.add_message([],"Wrong parameter",400))
+    end
+    %{
+      "receiverid" => receiverid,
+      "receivername" => receivername,
+      "money" => money
+    } = params
+    id = conn.assigns[:id]
+
     id = conn.assigns[:id]
     error_list = []
     # check receiverid
@@ -215,6 +230,10 @@ defmodule HelloWeb.ApiBankController do
 
   defp check_money(error_list, money) do
     cond do
+      !is_binary(money) -> 
+        error_list = Response.add_message(error_list, "Money must be string", 400)
+      String.to_integer(money) ->
+        error_list = Response.add_message(error_list, "Money can't be greater than 50 mil", 400)
       String.match?(money, ~r/^\s*$/) ->
         error_list = Response.add_message(error_list, "Money can't be blank", 400)
 
@@ -226,23 +245,26 @@ defmodule HelloWeb.ApiBankController do
     end
   end
 
-  defp validate_money(money) when is_binary(money) do
+  defp validate_money(money)  do
     cond do
-      String.match?(money, ~r/^\s*$/) -> {:money_error, "Money can't be blank"}
-      !String.match?(money, ~r/^[0-9]*$/) -> {:money_error, "Money must be positive number"}
-      true -> {:ok, money}
+      !is_binary(money) -> 
+        {:money_error, "Money must be string"}
+      String.to_integer(money) > 50000000 ->
+        {:money_error, "Money can't greater than 50 mil"}
+      String.match?(money, ~r/^\s*$/) -> 
+        {:money_error, "Money can't be blank"}
+      !String.match?(money, ~r/^[0-9]*$/) -> 
+        {:money_error, "Money must be positive number"}
+      true -> 
+        {:ok, money}
     end
   end
 
   defp add_money(id, deposit) do
     deposit = String.to_integer(deposit)
-    if deposit  > 50000000 do
-      {:handle_money_error,"Can't add/transfer more than 50 milion a time"}
-    else
     money = Usermanage.show_money(id)
     money = money + deposit
     {:ok, money}
-    end
   end
 
   defp sub_money(id, withdraw) do
@@ -250,8 +272,6 @@ defmodule HelloWeb.ApiBankController do
     withdraw = String.to_integer(withdraw)
 
     cond do 
-      withdraw > 50000000->
-        {:handle_money_error,"Can't withdraw more than 50 mil a time"}
       withdraw > money ->
       {:handle_money_error, "Money in your account is not enough"}
       true ->

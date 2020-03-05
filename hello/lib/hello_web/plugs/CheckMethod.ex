@@ -13,7 +13,8 @@ defmodule HelloWeb.Plugs.CheckMethod do
             method !== "GET"  &&
             method !== "POST" &&
             method !== "PUT"  &&
-            method !== "DELETE"
+            method !== "DELETE" &&
+            method !== "PATCH"
         ) do
             Response.error(conn,Response.add_message([],"Method is not supported",404))
         else

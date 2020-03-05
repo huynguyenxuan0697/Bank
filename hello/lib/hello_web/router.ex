@@ -48,6 +48,7 @@ defmodule HelloWeb.Router do
     put "/*path", DefaultController, :default
     post "/*path", DefaultController, :default
     delete "/*path", DefaultController, :default
+    patch "/*path", DefaultController, :default
   end
   
 end
