@@ -157,7 +157,7 @@ defmodule HelloWeb.ApiBankController do
     error_list = check_receiverid(error_list, receiverid)
     # check receiver name
     error_list = check_receivername(error_list, receivername)
-    # check receiver id and name 
+    # check receiver id and name
     error_list = check_receiver_id_name(error_list, receiverid, receivername)
     # check money
     error_list = check_money(error_list, money)
@@ -191,9 +191,10 @@ defmodule HelloWeb.ApiBankController do
 
   defp check_receiverid(error_list, receiverid) do
     cond do
+      !is_binary(receiverid) ->
+        error_list = Response.add_message(error_list, "Receiver's id must be string", 400)
       String.match?(receiverid, ~r/^\s*$/) ->
         error_list = Response.add_message(error_list, "Receiver's id can't be blank", 400)
-
       !(String.match?(receiverid, ~r/^[0-9]*$/)) ->
         error_list = Response.add_message(error_list, "Receiver's id must be positive number", 400)
 
@@ -204,6 +205,8 @@ defmodule HelloWeb.ApiBankController do
 
   defp check_receivername(error_list, receivername) do
     cond do
+      !is_binary(receivername) ->
+        error_list = Response.add_message(error_list, "Receiver's name must be string", 400)
       String.match?(receivername, ~r/^\s*$/) ->
         error_list = Response.add_message(error_list, "Receiver's name can't be blank", 400)
       true ->
@@ -212,10 +215,7 @@ defmodule HelloWeb.ApiBankController do
   end
 
   defp check_receiver_id_name(error_list, receiverid, receivername) do
-    if !String.match?(receiverid, ~r/^\s*$/) 
-    && !String.match?(receivername, ~r/^\s*$/) 
-    && String.match?(receiverid, ~r/^[0-9]*$/)
-    do
+    if error_list === [] do
       cond do
         String.to_integer(receiverid) !== Usermanage.show_id(receivername) ->
           error_list = Response.add_message(error_list, "Account and id are not matched", 400)
@@ -231,14 +231,13 @@ defmodule HelloWeb.ApiBankController do
   defp check_money(error_list, money) do
     cond do
       !is_binary(money) -> 
-        error_list = Response.add_message(error_list, "Money must be string", 400)
-      String.to_integer(money) ->
-        error_list = Response.add_message(error_list, "Money can't be greater than 50 mil", 400)
+        error_list = Response.add_message(error_list, "Money must be string", 400)      
       String.match?(money, ~r/^\s*$/) ->
         error_list = Response.add_message(error_list, "Money can't be blank", 400)
-
       !String.match?(money, ~r/^[0-9]*$/) ->
         error_list = Response.add_message(error_list, "Money must be positive number", 400)
+      String.to_integer(money) >50000000 ->
+        error_list = Response.add_message(error_list, "Money can't be greater than 50 mil", 400)
 
       true ->
         error_list
@@ -248,13 +247,13 @@ defmodule HelloWeb.ApiBankController do
   defp validate_money(money)  do
     cond do
       !is_binary(money) -> 
-        {:money_error, "Money must be string"}
-      String.to_integer(money) > 50000000 ->
-        {:money_error, "Money can't greater than 50 mil"}
+        {:money_error, "Money must be string"}      
       String.match?(money, ~r/^\s*$/) -> 
         {:money_error, "Money can't be blank"}
       !String.match?(money, ~r/^[0-9]*$/) -> 
         {:money_error, "Money must be positive number"}
+      String.to_integer(money) > 50000000 ->
+        {:money_error, "Money can't greater than 50 mil"}
       true -> 
         {:ok, money}
     end
