@@ -36,14 +36,14 @@ signupHandler = () => {
         password: password
       }
     })
-      .then(result => {
-        if (result.data.status === "ok") {
+      .then(resp => {
+        if (resp.data.status === "ok") {
           alert('Sign up successfully')
           renderSigninHTML();
         } else {
           AccountAlert = document.getElementById("AccountAlert");
           AccountAlert.className = "alert alert-danger";
-          AccountAlert.innerHTML = result.data.error_list;
+          AccountAlert.innerHTML = resp.data.error_list;
         }
       })
       .catch(error => {
@@ -57,6 +57,7 @@ signupHandler = () => {
 depositHandler = () => {
   user = JSON.parse(localStorage.getItem("userInfo"));
   money = document.getElementById("deposit_money").value;
+  depositAlert = document.getElementById("depositAlert");
   if (depositValidate()) {
     axios({
       method: "post",
@@ -80,6 +81,11 @@ depositHandler = () => {
             renderIndexHTML();
             location.reload();
           }
+          errorList = resp.data.error_list;
+          depositAlert.className = "alert alert-danger";
+          for (i in errorList){
+            depositAlert.innerHTML = resp.data.error_list[i].message + "</br>";
+          }
         }
       })
       .catch(error => {
@@ -91,6 +97,7 @@ depositHandler = () => {
 withdrawHandler = () => {
   user = JSON.parse(localStorage.getItem("userInfo"));
   money = document.getElementById("withdraw_money").value;
+  withdrawAlert = document.getElementById("withdrawAlert");
   if (withdrawValidate()) {
     axios({
       method: "post",
@@ -113,6 +120,11 @@ withdrawHandler = () => {
             renderIndexHTML();
             location.reload();
           }
+          errorList = resp.data.error_list;
+          withdrawAlert.className = "alert alert-danger";
+          for (i in errorList){
+            withdrawAlert.innerHTML += resp.data.error_list[i].message + "</br>";
+          }
         }
       })
       .catch(error => {
@@ -127,8 +139,8 @@ transferHandler = () => {
   receiverName = document.getElementById("receiver_name").value;
   receiverId = document.getElementById("receiver_id").value;
 
-  /*transferIdAlert = document.getElementById("transferIdAlert");
-  transferNameAlert = document.getElementById("transferNameAlert");
+  transferIdAlert = document.getElementById("transferIdAlert");
+  /*transferNameAlert = document.getElementById("transferNameAlert");
   transferMoneyAlert = document.getElementById("transferMoneyAlert");*/
   if (transferIdValidate() && transferIdValidate() && transferIdValidate()){
     axios({
@@ -153,6 +165,11 @@ transferHandler = () => {
             localStorage.removeItem("userInfo");
             renderIndexHTML();
             location.reload();
+          }
+          errorList = resp.data.error_list;
+          transferIdAlert.className = "alert alert-danger";
+          for (i in errorList){
+            transferIdAlert.innerHTML += resp.data.error_list[i].message + "</br>";
           }
         }
       })
@@ -234,7 +251,7 @@ renderMainHTML = (money) => {
                   </button>
                 </div>
                 <div class="modal-body">  
-                      <div id ="depositAlert"></div>    
+                      <div id ="depositAlert"></div>
                       <label for="money">Money</label>
                       <input class="form-control" name="deposit" id="deposit_money" type="number" 
                       onblur="depositValidate()"></input>
@@ -265,7 +282,7 @@ renderMainHTML = (money) => {
                 </div>
                 <div class="modal-footer">
                   <button id="btn-withdraw-close" type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                  <button  class="btn btn-primary" onclick="withdrawHandler()" id="withdrawSubmit">Withdraw</button>
+                  <button  class="btn btn-primary" onclick="withdrawHandler()" id="withdrawSubmit" disabled>Withdraw</button>
                 </div>  
               </div>
             </div>
@@ -292,7 +309,7 @@ renderMainHTML = (money) => {
                       </br>
                       <div id= "transferMoneyAlert"></div>
                       <label for="money">Money</label>
-                      <input class="form-control"  id="transfer_money" onblur="transferMoneyValidate()" type="number"></input>        
+                      <input class="form-control"  id="transfer_money" onblur="transferMoneyValidate()" type="number"></input>
                 </div>
                 <div class="modal-footer">
                   <button id="transferClose" type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -380,21 +397,21 @@ homeHandler = () => {
   if (user) {
     axios({
       method: "get",
-      url: "http://localhost:4000/api/bank/get-user-info",
+      url: "http://localhost:4000/api/bank/getuserinfo",
       headers: {
         authorization: `Bearer ${user.accesstoken}`
       }
     })
-      .then(result => {
-        if (result.data.status === 'ok')
+      .then(resp => {
+        if (resp.data.status === 'ok')
         {
-          account = result.data.data.account;
-          money = result.data.data.money;
+          account = resp.data.data.account;
+          money = resp.data.data.money;
           renderMainHTML(money);
           renderUserNameHTML(account);
         }
         else{
-          if (result.data.message === "Invalid token" || result.data.message === "You have been logged out" || result.data.message === "Token is expired"){
+          if (resp.data.message === "Invalid token" || resp.data.message === "You have been logged out" || resp.data.message === "Token is expired"){
             localStorage.removeItem("userInfo");
             renderIndexHTML();
             location.reload();
@@ -494,9 +511,9 @@ depositValidate = (e) => {
     depositAlert.innerHTML = "Money must be positive integer";
     button.disabled = true;
     return false;
-  } else if (money.length > 10) {
+  } else if (money.length > 8) {
     depositAlert.className = "alert alert-danger";
-    depositAlert.innerHTML = "Length of number must be less than 10";
+    depositAlert.innerHTML = "Length of number must be less than 8";
     button.disabled = true;
     return false;
   } else {
@@ -516,18 +533,22 @@ withdrawValidate = () => {
   if (money.match("^s*$")) {
     withdrawAlert.className = "alert alert-danger";
     withdrawAlert.innerHTML = "Money must be positive number";
+    button.disabled = true;
     return false;
   } else if (!money.match("^[0-9]*$")) {
     withdrawAlert.className = "alert alert-danger";
     withdrawAlert.innerHTML = "Money must be positive number";
+    button.disabled = true;
     return false;
-  } else if (money.length > 10) {
+  } else if (money.length > 8) {
     withdrawAlert.className = "alert alert-danger";
-    withdrawAlert.innerHTML = "Length of number must be less than 10";
+    withdrawAlert.innerHTML = "Length of number must be less than 8";
+    button.disabled = true;
     return false;
   } else {
     withdrawAlert.className = "";
     withdrawAlert.innerHTML = "";
+    button.disabled = false;
     return true;
   }
 };
@@ -582,9 +603,9 @@ transferMoneyValidate = () => {
     transferMoneyAlert.className = "alert alert-danger";
     transferMoneyAlert.innerHTML = "Money must be positive integer";
     return false;
-  } else if (money.length > 10) {
+  } else if (money.length > 8) {
     transferMoneyAlert.className = "alert alert-danger";
-    transferMoneyAlert.innerHTML = "Length of number must be less than 10";
+    transferMoneyAlert.innerHTML = "Length of number must be less than 8";
     return false;
   } else {
     transferMoneyAlert.className = "";
@@ -600,7 +621,7 @@ window.onload = () => {
     token = list[0].split("=")[1];
     axios({
       method: "post",
-      url: "http://localhost:4000/api/bank/facebook-handler",
+      url: "http://localhost:4000/api/bank/facebookHandler",
       data: {
         accesstoken: token
       }
